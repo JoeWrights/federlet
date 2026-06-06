@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack serve --config rspack.config.ts",
     "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
+    "dev:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite --config vite.config.ts",
     "build": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
     "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
+    "build:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite build --config vite.config.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
@@ -24,6 +26,7 @@
   "devDependencies": {
     "@federlet/rspack-config": "workspace:*",
     "@federlet/rsbuild-config": "workspace:*",
-    "@federlet/tsconfig": "workspace:*"
+    "@federlet/tsconfig": "workspace:*",
+    "@federlet/vite-config": "workspace:*"
   }
 }

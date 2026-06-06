@@ -18,8 +18,10 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:rsbuild": "turbo run dev:rsbuild",
+    "dev:vite": "turbo run dev:vite",
     "build": "turbo run build",
     "build:rsbuild": "turbo run build:rsbuild",
+    "build:vite": "turbo run build:vite",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "turbo run lint",

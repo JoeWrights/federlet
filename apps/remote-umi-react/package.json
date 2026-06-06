@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "NODE_OPTIONS=--openssl-legacy-provider umi dev",
     "dev:rsbuild": "NODE_OPTIONS=--openssl-legacy-provider umi dev",
+    "dev:vite": "NODE_OPTIONS=--openssl-legacy-provider umi dev",
     "build": "NODE_OPTIONS=--openssl-legacy-provider umi build",
     "build:rsbuild": "NODE_OPTIONS=--openssl-legacy-provider umi build",
+    "build:vite": "NODE_OPTIONS=--openssl-legacy-provider umi build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "lint": "tsc --noEmit",

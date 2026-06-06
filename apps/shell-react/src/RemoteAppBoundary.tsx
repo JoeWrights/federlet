@@ -9,6 +9,18 @@ interface RemoteAppBoundaryProps {
   route: RemoteRouteConfig;
 }
 
+export function scheduleRemoteUnmount(instance: MicroAppInstance | null) {
+  if (!instance) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    void Promise.resolve(instance.unmount()).catch((error: unknown) => {
+      console.error("Failed to unmount remote app", error);
+    });
+  }, 0);
+}
+
 /**
  * Shell 中负责加载、挂载和卸载 remote 应用的边界组件。
  *
@@ -45,7 +57,7 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
 
         // 如果加载过程中边界已经卸载，立即释放刚创建的 remote 实例。
         if (cancelled) {
-          void instance.unmount();
+          scheduleRemoteUnmount(instance);
           return;
         }
 
@@ -67,7 +79,7 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
       const instance = instanceRef.current;
       instanceRef.current = null;
       // 路由切换或组件卸载时，把清理动作交还给 remote 自己完成。
-      void instance?.unmount();
+      scheduleRemoteUnmount(instance);
     };
   }, [route, retryKey]);
 
