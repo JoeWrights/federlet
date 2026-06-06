@@ -18,6 +18,7 @@
       "@federlet/shared-types": ["packages/shared-types/src/index.ts"],
       "@federlet/mf-runtime": ["packages/mf-runtime/src/index.ts"],
       "@federlet/rspack-config": ["packages/rspack-config/src/index.ts"],
+      "@federlet/rsbuild-config": ["packages/rsbuild-config/src/index.ts"],
       "@federlet/shared-ui": ["packages/shared-ui/src/index.ts"]
     }
   }

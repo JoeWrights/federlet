@@ -57,3 +57,11 @@
 .react-remote__panel span {
   color: #475569;
 }
+
+.react-remote__loading {
+  border-radius: 18px;
+  padding: 22px;
+  background: #fff;
+  color: #1d4ed8;
+  font-weight: 700;
+}

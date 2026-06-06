@@ -1,10 +1,11 @@
-import { createApp, h, type App as VueApp } from "vue";
+import { createApp, type App as VueApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
 import type {
   MicroAppContext,
   MicroAppInstance,
 } from "@federlet/shared-types";
 import App from "./App.vue";
+import { createVueRemoteRoutes } from "./routes";
 import "./styles.css";
 
 /**
@@ -15,28 +16,7 @@ import "./styles.css";
 function createRemoteRouter(basename: string) {
   return createRouter({
     history: createWebHistory(basename),
-    routes: [
-      {
-        path: "/",
-        component: {
-          render: () =>
-            h("section", { class: "vue-remote__panel" }, [
-              h("strong", "128"),
-              h("span", "Vue analytics events processed"),
-            ]),
-        },
-      },
-      {
-        path: "/reports",
-        component: {
-          render: () =>
-            h("section", { class: "vue-remote__panel" }, [
-              h("strong", "Lifecycle shared"),
-              h("span", "The shell invokes Vue unmount on route changes."),
-            ]),
-        },
-      },
-    ],
+    routes: createVueRemoteRoutes(),
   });
 }
 

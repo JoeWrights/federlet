@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack serve --config rspack.config.ts",
+    "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
     "build": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
+    "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@federlet/rspack-config": "workspace:*",
+    "@federlet/rsbuild-config": "workspace:*",
     "@federlet/tsconfig": "workspace:*"
   }
 }

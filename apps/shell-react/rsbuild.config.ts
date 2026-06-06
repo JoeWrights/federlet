@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import { createReactHostConfig } from "@federlet/rspack-config";
+import { fileURLToPath } from "node:url";
+import { createReactHostConfig } from "@federlet/rsbuild-config";
 
 const appDir = dirname(fileURLToPath(import.meta.url));
 

@@ -172,6 +172,9 @@ function createBaseConfig(
         "Access-Control-Allow-Origin": "*",
       },
     },
+    // Module Federation remote 内部路由懒加载需要普通 async chunk，
+    // Rspack dev 默认会对 import() 启用 lazy-compilation proxy，容易让 Suspense 一直停在 fallback。
+    lazyCompilation: false,
     performance: {
       hints: false,
     },

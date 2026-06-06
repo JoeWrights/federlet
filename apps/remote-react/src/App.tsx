@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
+import { reactRemoteRoutes } from "./routes";
 
 /**
  * React remote 的示例页面。
@@ -20,26 +22,25 @@ export function App() {
         <Link to="settings">Settings</Link>
       </nav>
 
-      <Routes>
-        <Route
-          index
-          element={
-            <section className="react-remote__panel">
-              <strong>42</strong>
-              <span>federated React widgets loaded</span>
-            </section>
-          }
-        />
-        <Route
-          path="settings"
-          element={
-            <section className="react-remote__panel">
-              <strong>Shared lifecycle</strong>
-              <span>Unmount is handled by the host boundary.</span>
-            </section>
-          }
-        />
-      </Routes>
+      <Suspense
+        fallback={<p className="react-remote__loading">Loading route...</p>}
+      >
+        <Routes>
+          {reactRemoteRoutes.map((route) => {
+            const RouteComponent = route.Component;
+
+            return route.index ? (
+              <Route key={route.label} index element={<RouteComponent />} />
+            ) : (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={<RouteComponent />}
+              />
+            );
+          })}
+        </Routes>
+      </Suspense>
     </div>
   );
 }

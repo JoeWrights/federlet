@@ -13,6 +13,7 @@ Federlet 是一个轻量微前端框架，基于 Rspack Module Federation 跑通
 - React Shell
 - React Remote
 - Vue Remote
+- Umi 3 React Remote
 
 ## 目录结构
 
@@ -21,6 +22,7 @@ apps/
   shell-react/    React 主应用，负责布局、路由、remote 加载和错误边界
   remote-react/   React 微应用，暴露 ./mount
   remote-vue/     Vue 微应用，暴露 ./mount
+  remote-umi-react/ Umi 3 + React 17 微应用，使用 Webpack 5 暴露 ./mount
 packages/
   mf-runtime/     remote 加载、挂载协议和事件总线
   rspack-config/  共享 Rspack 与 Module Federation 配置工厂
@@ -41,8 +43,9 @@ pnpm dev
 - Shell: `http://localhost:3000`
 - React Remote: `http://localhost:3001`
 - Vue Remote: `http://localhost:3002`
+- Umi React Remote: `http://localhost:3003`
 
-访问 Shell 后可以进入 `/react` 和 `/vue` 查看两个 remote。
+访问 Shell 后可以进入 `/react`、`/vue` 和 `/umi` 查看三个 remote。
 
 ## 架构文档
 
@@ -88,6 +91,13 @@ pnpm clean
 2. 新建 `src/mount.ts`，在其中调用 `createApp(App).mount(container)`。
 3. 在 `unmount()` 中调用 `app.unmount()`。
 4. 在 Module Federation `exposes` 中暴露 `./mount`。
+
+## 接入现有 Umi 3 React 项目
+
+1. 确保 Umi 版本支持 `webpack5: {}`，并在 `chainWebpack` 中注入 `webpack.container.ModuleFederationPlugin`。
+2. 暴露 `./mount`，在其中接收 Shell 传入的 `container` 和 `basename`。
+3. 如果 Umi 项目使用 React 17，而 Shell 使用 React 19，优先不要共享 `react` 和 `react-dom`，让 Umi remote 独立打包自己的 React runtime。
+4. Node 18+ 下如果遇到旧 Webpack hash 的 OpenSSL 错误，可在 Umi 脚本中设置 `NODE_OPTIONS=--openssl-legacy-provider`。
 
 ## 部署建议
 
