@@ -20,6 +20,7 @@
       "@federlet/rspack-config": ["packages/rspack-config/src/index.ts"],
       "@federlet/rsbuild-config": ["packages/rsbuild-config/src/index.ts"],
       "@federlet/vite-config": ["packages/vite-config/src/index.ts"],
+      "@federlet/webpack-config": ["packages/webpack-config/src/index.ts"],
       "@federlet/shared-ui": ["packages/shared-ui/src/index.ts"]
     }
   }

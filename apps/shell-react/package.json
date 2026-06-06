@@ -7,9 +7,11 @@
     "dev": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack serve --config rspack.config.ts",
     "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
     "dev:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite --config vite.config.ts",
+    "dev:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack serve --mode development --config webpack.config.ts",
     "build": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
     "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
     "build:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite build --config vite.config.ts",
+    "build:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack build --mode production --config webpack.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
@@ -27,6 +29,7 @@
     "@federlet/rspack-config": "workspace:*",
     "@federlet/rsbuild-config": "workspace:*",
     "@federlet/tsconfig": "workspace:*",
-    "@federlet/vite-config": "workspace:*"
+    "@federlet/vite-config": "workspace:*",
+    "@federlet/webpack-config": "workspace:*"
   }
 }
