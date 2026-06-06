@@ -1,0 +1,60 @@
+.vue-remote {
+  border: 1px solid #bbf7d0;
+  border-radius: 24px;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top right, rgb(34 197 94 / 20%), transparent 34%),
+    #f0fdf4;
+}
+
+.vue-remote__eyebrow {
+  margin: 0 0 10px;
+  color: #15803d;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.vue-remote h1 {
+  margin: 0;
+  color: #14532d;
+  font-size: 40px;
+}
+
+.vue-remote p {
+  max-width: 640px;
+  color: #166534;
+}
+
+.vue-remote__tabs {
+  display: flex;
+  gap: 12px;
+  margin: 28px 0;
+}
+
+.vue-remote__tabs a {
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: #166534;
+  background: #dcfce7;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.vue-remote__panel {
+  display: grid;
+  gap: 8px;
+  border-radius: 18px;
+  padding: 22px;
+  background: #fff;
+  box-shadow: 0 16px 32px rgb(21 128 61 / 14%);
+}
+
+.vue-remote__panel strong {
+  color: #14532d;
+  font-size: 32px;
+}
+
+.vue-remote__panel span {
+  color: #475569;
+}

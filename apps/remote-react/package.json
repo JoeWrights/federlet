@@ -1,0 +1,24 @@
+{
+  "name": "@federlet/remote-react",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack serve --config rspack.config.ts",
+    "build": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@federlet/shared-types": "workspace:*",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-router-dom": "^7.9.6"
+  },
+  "devDependencies": {
+    "@federlet/rspack-config": "workspace:*",
+    "@federlet/tsconfig": "workspace:*"
+  }
+}

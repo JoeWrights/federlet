@@ -1,0 +1,10 @@
+{
+  "name": "@federlet/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "library.json",
+    "react.json",
+    "vue.json"
+  ]
+}

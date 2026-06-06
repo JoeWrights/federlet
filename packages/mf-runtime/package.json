@@ -1,0 +1,22 @@
+{
+  "name": "@federlet/mf-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit && mkdir -p dist && node -e \"require('fs').writeFileSync('dist/.keep', '')\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@module-federation/enhanced": "^0.21.6",
+    "@federlet/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@federlet/tsconfig": "workspace:*"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "federlet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lightweight micro-frontend framework powered by Module Federation.",
+  "keywords": [
+    "micro-frontend",
+    "module-federation",
+    "rspack",
+    "react",
+    "vue"
+  ],
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "@module-federation/enhanced": "^0.21.6",
+    "@rspack/cli": "^1.5.8",
+    "@rspack/core": "^1.5.8",
+    "@rspack/dev-server": "^1.1.4",
+    "@types/node": "^18.19.130",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vue/compiler-sfc": "^3.5.25",
+    "css-loader": "^7.1.2",
+    "jsdom": "^24.1.3",
+    "style-loader": "^4.0.0",
+    "tsx": "^4.22.4",
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9",
+    "vue-loader": "^17.4.2"
+  }
+}

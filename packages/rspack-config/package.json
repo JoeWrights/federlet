@@ -1,0 +1,23 @@
+{
+  "name": "@federlet/rspack-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit && mkdir -p dist && node -e \"require('fs').writeFileSync('dist/.keep', '')\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@module-federation/enhanced": "^0.21.6",
+    "@rspack/core": "^1.5.8",
+    "vue-loader": "^17.4.2"
+  },
+  "devDependencies": {
+    "@federlet/tsconfig": "workspace:*"
+  }
+}
