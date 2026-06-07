@@ -58,6 +58,12 @@
   color: #475569;
 }
 
+.react-remote__shared-grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
 .react-remote__loading {
   border-radius: 18px;
   padding: 22px;

@@ -1,9 +1,6 @@
 import { createRoot, type Root } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import type {
-  MicroAppContext,
-  MicroAppInstance,
-} from "@federlet/shared-types";
+import type { MicroAppContext, MicroAppInstance } from "@federlet/shared-types";
 import { App } from "./App";
 import "./styles.css";
 
@@ -18,7 +15,7 @@ export function mount(context: MicroAppContext): MicroAppInstance {
   // basename 让 remote 内部路由自然工作在 Shell 分配的子路径下。
   root.render(
     <BrowserRouter basename={context.basename}>
-      <App />
+      <App portalContainer={context.container} />
     </BrowserRouter>,
   );
 

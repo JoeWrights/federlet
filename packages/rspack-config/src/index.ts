@@ -38,6 +38,9 @@ export interface HostConfigOptions extends BaseAppConfigOptions {
 export interface RemoteConfigOptions extends BaseAppConfigOptions {
   /** 暴露给 Shell 的模块映射，例如 `{ "./mount": "./src/mount.tsx" }`。 */
   exposes: Record<string, string>;
+
+  /** React remote 是否提供 shared-ui fallback；生产接入 Shell 时可关闭以减少包体积。 */
+  provideSharedUi?: boolean;
 }
 
 /** 获取 monorepo 根目录，用于配置跨包 alias。 */
@@ -70,7 +73,19 @@ function workspaceAliases(appDir: string): Record<string, string> {
 }
 
 /** React host/remote 共享同一份 React 单例，避免多个 React 实例导致 hooks 异常。 */
-function reactShared(): SharedConfig {
+function reactShared(options: { provideSharedUi?: boolean } = {}): SharedConfig {
+  const sharedUi =
+    options.provideSharedUi === false
+      ? {
+          singleton: true,
+          requiredVersion: false as const,
+          import: false as const,
+        }
+      : {
+          singleton: true,
+          requiredVersion: false as const,
+        };
+
   return {
     react: {
       singleton: true,
@@ -80,6 +95,7 @@ function reactShared(): SharedConfig {
       singleton: true,
       requiredVersion: "^19.2.1",
     },
+    "@federlet/shared-ui": sharedUi,
   };
 }
 
@@ -219,7 +235,7 @@ export function createReactRemoteConfig(
       name: options.name,
       filename: "remoteEntry.js",
       exposes: options.exposes,
-      shared: reactShared(),
+      shared: reactShared({ provideSharedUi: options.provideSharedUi }),
       dts: false,
       manifest: false,
     }),

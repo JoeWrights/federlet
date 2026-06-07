@@ -8,7 +8,7 @@
     "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
     "dev:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite --config vite.config.ts",
     "dev:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack serve --mode development --config webpack.config.ts",
-    "build": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
+    "build": "FEDERLET_PROVIDE_SHARED_UI=false NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
     "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
     "build:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite build --config vite.config.ts",
     "build:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack build --mode production --config webpack.config.ts",
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@federlet/shared-types": "workspace:*",
+    "@federlet/shared-ui": "workspace:*",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.9.6"
