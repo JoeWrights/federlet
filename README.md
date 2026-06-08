@@ -121,7 +121,7 @@ React/Vue Vite remote 仍然保持 `type: "module"`。因此 `@federlet/vite-con
 
 ### Vite config 引用 workspace TS 包
 
-`@federlet/vite-config` 的入口是 workspace 内的 TypeScript 源码。运行 Vite 或 Vitest 加载 `vite.config.ts` 时，需要带 `NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx'`，否则 Node 原生 ESM 会报 `Unknown file extension ".ts"`。
+`@federlet/vite-config` 的入口是 workspace 内的 TypeScript 源码。运行 Vite 或 Vitest 加载 `vite.config.ts` 时，需要通过 `scripts/run-with-tsx.mjs` 注册 tsx；脚本会按当前 Node 版本选择 `--loader tsx` 或 `--import tsx`，避免 Node 20.6+ 下 `--loader` 被拒绝。
 
 ### Shell 切换 remote 时 React root 同步卸载警告
 

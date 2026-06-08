@@ -1,8 +1,15 @@
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import { createReactRemoteConfig } from "@federlet/rspack-config";
 
 const appDir = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const appPackage = require("./package.json") as {
+  federlet?: {
+    sharedUiRequiredVersion?: string;
+  };
+};
 
 interface RspackCliOptions {
   mode?: string;
@@ -13,6 +20,17 @@ function shouldProvideSharedUi(argv: RspackCliOptions) {
     process.env.FEDERLET_PROVIDE_SHARED_UI !== "false" &&
     argv.mode !== "production"
   );
+}
+
+function sharedUiConfig(argv: RspackCliOptions) {
+  const requiredVersion = appPackage.federlet?.sharedUiRequiredVersion;
+
+  return {
+    singleton: true,
+    requiredVersion,
+    ...(requiredVersion ? { strictVersion: true as const } : {}),
+    ...(shouldProvideSharedUi(argv) ? {} : { import: false as const }),
+  };
 }
 
 export default function createConfig(
@@ -26,6 +44,8 @@ export default function createConfig(
     exposes: {
       "./mount": "./src/mount.tsx",
     },
-    provideSharedUi: shouldProvideSharedUi(argv),
+    shared: {
+      "@federlet/shared-ui": sharedUiConfig(argv),
+    },
   });
 }

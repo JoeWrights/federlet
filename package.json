@@ -27,6 +27,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "check:shared-ui": "node scripts/check-shared-ui-compat.mjs",
     "clean": "turbo run clean"
   },
   "devDependencies": {

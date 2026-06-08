@@ -128,6 +128,12 @@ function createBaseConfig(
         strategy: "all-in-one",
       },
     },
+    tools: {
+      rspack(config) {
+        // Federated remotes need real async chunks for their own internal routes in dev.
+        config.lazyCompilation = false;
+      },
+    },
     plugins: [framework === "react" ? pluginReact() : pluginVue()],
   };
 }

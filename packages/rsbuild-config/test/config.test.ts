@@ -25,6 +25,25 @@ describe("rsbuild config factories", () => {
     pluginModuleFederationMock.mockClear();
   });
 
+  it("disables lazy compilation so federated remote route chunks resolve in dev", () => {
+    const config = createReactRemoteConfig({
+      appDir,
+      name: "remote_react",
+      port: 3001,
+      exposes: {
+        "./mount": "./src/mount.tsx",
+      },
+    });
+    const rspackConfig: { lazyCompilation?: boolean } = {};
+    const applyRspackConfig = config.tools?.rspack;
+
+    expect(applyRspackConfig).toEqual(expect.any(Function));
+
+    (applyRspackConfig as (config: typeof rspackConfig) => void)(rspackConfig);
+
+    expect(rspackConfig.lazyCompilation).toBe(false);
+  });
+
   it("creates a React host config with server, html, source and federation settings", () => {
     const config = createReactHostConfig({
       appDir,

@@ -4,16 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack serve --config rspack.config.ts",
+    "dev": "node ../../scripts/run-with-tsx.mjs rspack serve --config rspack.config.ts",
     "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
-    "dev:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite --config vite.config.ts",
-    "dev:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack serve --mode development --config webpack.config.ts",
-    "build": "FEDERLET_PROVIDE_SHARED_UI=false NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' rspack build --config rspack.config.ts",
+    "dev:vite": "node ../../scripts/run-with-tsx.mjs vite --config vite.config.ts",
+    "dev:webpack": "node ../../scripts/run-with-tsx.mjs webpack serve --mode development --config webpack.config.ts",
+    "build": "FEDERLET_PROVIDE_SHARED_UI=false node ../../scripts/run-with-tsx.mjs rspack build --config rspack.config.ts",
     "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
-    "build:vite": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vite build --config vite.config.ts",
-    "build:webpack": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' webpack build --mode production --config webpack.config.ts",
+    "build:vite": "node ../../scripts/run-with-tsx.mjs vite build --config vite.config.ts",
+    "build:webpack": "node ../../scripts/run-with-tsx.mjs webpack build --mode production --config webpack.config.ts",
     "typecheck": "tsc --noEmit",
-    "test": "NODE_OPTIONS='--no-warnings=ExperimentalWarning --loader tsx' vitest run --passWithNoTests",
+    "test": "node ../../scripts/run-with-tsx.mjs vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
@@ -23,6 +23,9 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.9.6"
+  },
+  "federlet": {
+    "sharedUiRequiredVersion": "^0.1.0"
   },
   "devDependencies": {
     "@federlet/rspack-config": "workspace:*",

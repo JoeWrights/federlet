@@ -38,9 +38,9 @@
 
 ## 阶段二：多构建器兼容与迁移策略
 
-- [x] Vite 并行 POC。
-- [x] Rsbuild 并行 POC。
-- [x] Webpack 并行 POC。
+- [x] Vite。
+- [x] Rsbuild。
+- [x] Webpack。
 - [x] 根级 `dev:vite` / `build:vite`。
 - [x] 根级 `dev:rsbuild` / `build:rsbuild`。
 - [x] 根级 `dev:webpack` / `build:webpack`。

@@ -28,7 +28,7 @@ describe("rspack config factories", () => {
     expect(config.lazyCompilation).toBe(false);
   });
 
-  it("shares the React UI package from the host", () => {
+  it("shares only the React runtime from the host by default", () => {
     createReactHostConfig({
       appDir: "/workspace/apps/shell-react",
       name: "shell_react",
@@ -44,17 +44,21 @@ describe("rspack config factories", () => {
         remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
       },
       shared: expect.objectContaining({
-      "@federlet/shared-ui": {
-        singleton: true,
-        requiredVersion: false,
-      },
+        react: {
+          singleton: true,
+          requiredVersion: "^19.2.1",
+        },
+        "react-dom": {
+          singleton: true,
+          requiredVersion: "^19.2.1",
+        },
       }),
       dts: false,
       manifest: false,
     });
   });
 
-  it("keeps shared UI as a remote fallback for standalone dev", () => {
+  it("does not configure shared UI for React remotes by default", () => {
     createReactRemoteConfig({
       appDir: "/workspace/apps/remote-react",
       name: "remote_react",
@@ -71,17 +75,27 @@ describe("rspack config factories", () => {
         "./mount": "./src/mount.tsx",
       },
       shared: expect.objectContaining({
-      "@federlet/shared-ui": {
-        singleton: true,
-        requiredVersion: false,
-      },
+        react: {
+          singleton: true,
+          requiredVersion: "^19.2.1",
+        },
+        "react-dom": {
+          singleton: true,
+          requiredVersion: "^19.2.1",
+        },
       }),
       dts: false,
       manifest: false,
     });
+
+    const call = ModuleFederationPluginMock.mock.lastCall?.[0] as {
+      shared: Record<string, unknown>;
+    };
+
+    expect(call.shared["@federlet/shared-ui"]).toBeUndefined();
   });
 
-  it("omits the shared UI fallback from production remotes", () => {
+  it("uses business-provided shared UI config for production remotes", () => {
     createReactRemoteConfig({
       appDir: "/workspace/apps/remote-react",
       name: "remote_react",
@@ -89,7 +103,14 @@ describe("rspack config factories", () => {
       exposes: {
         "./mount": "./src/mount.tsx",
       },
-      provideSharedUi: false,
+      shared: {
+        "@federlet/shared-ui": {
+          singleton: true,
+          requiredVersion: "^0.1.0",
+          strictVersion: true,
+          import: false,
+        },
+      },
     });
 
     expect(ModuleFederationPluginMock).toHaveBeenLastCalledWith({
@@ -99,11 +120,65 @@ describe("rspack config factories", () => {
         "./mount": "./src/mount.tsx",
       },
       shared: expect.objectContaining({
-      "@federlet/shared-ui": {
-        singleton: true,
-        requiredVersion: false,
-        import: false,
+        "@federlet/shared-ui": {
+          singleton: true,
+          requiredVersion: "^0.1.0",
+          strictVersion: true,
+          import: false,
+        },
+      }),
+      dts: false,
+      manifest: false,
+    });
+  });
+
+  it("merges externally configured shared dependencies for React apps", () => {
+    createReactRemoteConfig({
+      appDir: "/workspace/apps/remote-react",
+      name: "remote_react",
+      port: 3001,
+      exposes: {
+        "./mount": "./src/mount.tsx",
       },
+      shared: {
+        antd: {
+          singleton: true,
+          requiredVersion: "^5.0.0",
+          strictVersion: true,
+          import: false,
+        },
+        "@federlet/shared-ui": {
+          singleton: true,
+          requiredVersion: "^0.2.0",
+          strictVersion: true,
+          import: false,
+        },
+      },
+    });
+
+    expect(ModuleFederationPluginMock).toHaveBeenLastCalledWith({
+      name: "remote_react",
+      filename: "remoteEntry.js",
+      exposes: {
+        "./mount": "./src/mount.tsx",
+      },
+      shared: expect.objectContaining({
+        react: {
+          singleton: true,
+          requiredVersion: "^19.2.1",
+        },
+        antd: {
+          singleton: true,
+          requiredVersion: "^5.0.0",
+          strictVersion: true,
+          import: false,
+        },
+        "@federlet/shared-ui": {
+          singleton: true,
+          requiredVersion: "^0.2.0",
+          strictVersion: true,
+          import: false,
+        },
       }),
       dts: false,
       manifest: false,
