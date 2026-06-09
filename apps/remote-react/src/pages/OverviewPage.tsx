@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Alert } from "antd";
 import {
   MetricTile,
   Modal,
@@ -23,6 +24,13 @@ export default function OverviewPage() {
       <SharedButton onClick={() => setIsModalOpen(true)}>
         Open shared dashboard
       </SharedButton>
+
+      <Alert
+        message="Ant Design 5 is provided by the Shell"
+        description="remote-react consumes antd from the Rspack Module Federation shared scope."
+        type="success"
+        showIcon
+      />
 
       <Modal
         open={isModalOpen}

@@ -44,6 +44,9 @@ describe("OverviewPage", () => {
 
     expect(shellRemoteContainer.textContent).toContain("Shared UI card");
     expect(shellRemoteContainer.textContent).toContain("Open shared dashboard");
+    expect(shellRemoteContainer.textContent).toContain(
+      "Ant Design 5 is provided by the Shell",
+    );
   });
 
   it("mounts shared UI modal inside the shell remote container", () => {

@@ -21,13 +21,14 @@
     "@federlet/mf-runtime": "workspace:*",
     "@federlet/shared-types": "workspace:*",
     "@federlet/shared-ui": "workspace:*",
+    "antd": "5",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.9.6"
   },
   "devDependencies": {
-    "@federlet/rspack-config": "workspace:*",
     "@federlet/rsbuild-config": "workspace:*",
+    "@federlet/rspack-config": "workspace:*",
     "@federlet/tsconfig": "workspace:*",
     "@federlet/vite-config": "workspace:*",
     "@federlet/webpack-config": "workspace:*"

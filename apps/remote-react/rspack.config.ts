@@ -6,6 +6,7 @@ import { createReactRemoteConfig } from "@federlet/rspack-config";
 const appDir = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const appPackage = require("./package.json") as {
+  dependencies?: Record<string, string>;
   federlet?: {
     sharedUiRequiredVersion?: string;
   };
@@ -33,6 +34,15 @@ function sharedUiConfig(argv: RspackCliOptions) {
   };
 }
 
+function antdConfig(argv: RspackCliOptions) {
+  return {
+    singleton: true,
+    requiredVersion: appPackage.dependencies?.antd ?? "^5",
+    strictVersion: true,
+    ...(argv.mode === "production" ? { import: false as const } : {}),
+  };
+}
+
 export default function createConfig(
   _env: unknown,
   argv: RspackCliOptions = {},
@@ -46,6 +56,7 @@ export default function createConfig(
     },
     shared: {
       "@federlet/shared-ui": sharedUiConfig(argv),
+      antd: antdConfig(argv),
     },
   });
 }

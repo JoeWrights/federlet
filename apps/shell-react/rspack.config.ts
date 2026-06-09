@@ -5,6 +5,9 @@ import { createReactHostConfig } from "@federlet/rspack-config";
 
 const appDir = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+const appPackage = require("./package.json") as {
+  dependencies?: Record<string, string>;
+};
 const sharedUiPackage = require("../../packages/shared-ui/package.json") as {
   version: string;
 };
@@ -18,6 +21,11 @@ export default createReactHostConfig({
     "@federlet/shared-ui": {
       singleton: true,
       requiredVersion: sharedUiPackage.version,
+      strictVersion: true,
+    },
+    antd: {
+      singleton: true,
+      requiredVersion: appPackage.dependencies?.antd ?? "^5",
       strictVersion: true,
     },
   },
