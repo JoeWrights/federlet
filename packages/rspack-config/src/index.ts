@@ -1,11 +1,24 @@
+import { createRequire } from "node:module";
 import path from "node:path";
 import { ModuleFederationPlugin } from "@module-federation/enhanced/rspack";
 import { rspack, type Configuration } from "@rspack/core";
+import {
+  createRemoteScopeClass,
+  createStyleIsolationPostcssPlugin,
+} from "@federlet/style-isolation";
 import { VueLoaderPlugin } from "vue-loader";
 
 type SharedConfig = NonNullable<
   ConstructorParameters<typeof ModuleFederationPlugin>[0]["shared"]
 >;
+
+const require = createRequire(import.meta.url);
+
+type StyleIsolationConfig =
+  | boolean
+  | {
+      scopeClass?: string;
+    };
 
 export interface BaseAppConfigOptions {
   /** 当前应用目录，所有入口、模板和输出路径都以它为基准解析。 */
@@ -25,6 +38,9 @@ export interface BaseAppConfigOptions {
 
   /** 追加或覆盖 Module Federation shared 依赖配置。 */
   shared?: SharedConfig;
+
+  /** 构建期 CSS selector 前缀化配置。Host 默认关闭，remote 默认开启。 */
+  styleIsolation?: StyleIsolationConfig;
 }
 
 /**
@@ -69,6 +85,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/shared-ui/src/index.ts",
     ),
+    "@federlet/style-isolation": path.resolve(
+      root,
+      "packages/style-isolation/src/index.ts",
+    ),
   };
 }
 
@@ -101,6 +121,71 @@ function mergeShared(defaultShared: SharedConfig, overrideShared?: SharedConfig)
     ...defaultShared,
     ...(overrideShared ?? {}),
   };
+}
+
+function resolveStyleIsolation(
+  options: BaseAppConfigOptions,
+): { scopeClass: string } | null {
+  if (!options.styleIsolation) {
+    return null;
+  }
+
+  const configuredScopeClass =
+    typeof options.styleIsolation === "object"
+      ? options.styleIsolation.scopeClass
+      : undefined;
+
+  return {
+    scopeClass: configuredScopeClass ?? createRemoteScopeClass(options.name),
+  };
+}
+
+function cssRules(options: BaseAppConfigOptions) {
+  const styleIsolation = resolveStyleIsolation(options);
+  const styleLoader = require.resolve("style-loader");
+  const cssLoader = require.resolve("css-loader");
+
+  if (!styleIsolation) {
+    return [
+      {
+        test: /\.css$/,
+        use: [styleLoader, cssLoader],
+      },
+    ];
+  }
+
+  return [
+    {
+      test: /\.css$/,
+      exclude: /node_modules/,
+      use: [
+        styleLoader,
+        {
+          loader: cssLoader,
+          options: {
+            importLoaders: 1,
+          },
+        },
+        {
+          loader: require.resolve("postcss-loader"),
+          options: {
+            postcssOptions: {
+              plugins: [
+                createStyleIsolationPostcssPlugin({
+                  scopeClass: styleIsolation.scopeClass,
+                }),
+              ],
+            },
+          },
+        },
+      ],
+    },
+    {
+      test: /\.css$/,
+      include: /node_modules/,
+      use: [styleLoader, cssLoader],
+    },
+  ];
 }
 
 /**
@@ -163,10 +248,7 @@ function createBaseConfig(
             },
           },
         },
-        {
-          test: /\.css$/,
-          use: ["style-loader", "css-loader"],
-        },
+        ...cssRules(options),
       ],
     },
     plugins: [
@@ -221,7 +303,13 @@ export function createReactHostConfig(options: HostConfigOptions): Configuration
 export function createReactRemoteConfig(
   options: RemoteConfigOptions,
 ): Configuration {
-  const config = createBaseConfig(options, "react");
+  const config = createBaseConfig(
+    {
+      ...options,
+      styleIsolation: options.styleIsolation ?? true,
+    },
+    "react",
+  );
 
   config.plugins = [
     ...(config.plugins ?? []),
@@ -246,6 +334,7 @@ export function createVueRemoteConfig(options: RemoteConfigOptions): Configurati
     {
       ...options,
       entry: options.entry ?? "src/main.ts",
+      styleIsolation: options.styleIsolation ?? true,
     },
     "vue",
   );

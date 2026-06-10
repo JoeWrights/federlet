@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { mountRemoteApp } from "@federlet/mf-runtime";
+import {
+  createRemoteContainerClassName as createScopedRemoteContainerClassName,
+} from "@federlet/style-isolation";
 import type {
   MicroAppInstance,
   RemoteRouteConfig,
@@ -19,6 +22,13 @@ export function scheduleRemoteUnmount(instance: MicroAppInstance | null) {
       console.error("Failed to unmount remote app", error);
     });
   }, 0);
+}
+
+export function createRemoteContainerClassName(remoteName: string) {
+  return createScopedRemoteContainerClassName(
+    "remote-boundary__container",
+    remoteName,
+  );
 }
 
 /**
@@ -103,7 +113,11 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
         </div>
       ) : null}
 
-      <div ref={containerRef} className="remote-boundary__container" />
+      <div
+        ref={containerRef}
+        className={createRemoteContainerClassName(route.remoteName)}
+        data-federlet-remote={route.remoteName}
+      />
     </section>
   );
 }

@@ -20,6 +20,26 @@ function pluginNames(config: ReturnType<typeof createReactHostConfig>) {
   return (config.plugins ?? []).map((plugin) => plugin && "name" in plugin && plugin.name);
 }
 
+function postcssPluginNames(config: ReturnType<typeof createReactRemoteConfig>) {
+  const postcssOptions = config.tools?.postcss;
+
+  if (!postcssOptions || !("postcssOptions" in postcssOptions)) {
+    return [];
+  }
+
+  const normalizedPostcssOptions = postcssOptions.postcssOptions as
+    | { plugins?: unknown[] }
+    | undefined;
+
+  return (normalizedPostcssOptions?.plugins ?? []).map((plugin) => {
+    if (plugin && typeof plugin === "object" && "postcssPlugin" in plugin) {
+      return plugin.postcssPlugin;
+    }
+
+    return undefined;
+  });
+}
+
 describe("rsbuild config factories", () => {
   beforeEach(() => {
     pluginModuleFederationMock.mockClear();
@@ -116,6 +136,20 @@ describe("rsbuild config factories", () => {
       dts: false,
       manifest: false,
     });
+    expect(postcssPluginNames(config)).toContain("federlet-style-isolation");
+  });
+
+  it("does not enable CSS selector prefixing for hosts", () => {
+    const config = createReactHostConfig({
+      appDir,
+      name: "shell_react",
+      port: 3000,
+      remotes: {
+        remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
+      },
+    });
+
+    expect(postcssPluginNames(config)).not.toContain("federlet-style-isolation");
   });
 
   it("creates a Vue remote config with the Vue entry default", () => {

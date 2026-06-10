@@ -14,6 +14,37 @@ vi.mock("@module-federation/enhanced/rspack", () => ({
 
 const ModuleFederationPluginMock = vi.mocked(ModuleFederationPlugin);
 
+function cssRules(config: ReturnType<typeof createReactRemoteConfig>) {
+  return (config.module?.rules ?? []).filter((rule) => {
+    if (!rule || typeof rule !== "object" || !("test" in rule)) {
+      return false;
+    }
+
+    return String(rule.test).includes("css");
+  });
+}
+
+function ruleUsesPostcss(rule: unknown) {
+  if (!rule || typeof rule !== "object" || !("use" in rule)) {
+    return false;
+  }
+
+  return Array.isArray(rule.use)
+    ? rule.use.some((useItem) => {
+        if (typeof useItem === "string") {
+          return useItem.includes("postcss-loader");
+        }
+
+        return (
+          typeof useItem === "object" &&
+          useItem !== null &&
+          "loader" in useItem &&
+          String(useItem.loader).includes("postcss-loader")
+        );
+      })
+    : false;
+}
+
 describe("rspack config factories", () => {
   it("disables lazy compilation so federated remote route chunks resolve in dev", () => {
     const config = createReactRemoteConfig({
@@ -93,6 +124,54 @@ describe("rspack config factories", () => {
     };
 
     expect(call.shared["@federlet/shared-ui"]).toBeUndefined();
+  });
+
+  it("enables CSS selector prefixing for React remotes by default", () => {
+    const config = createReactRemoteConfig({
+      appDir: "/workspace/apps/remote-react",
+      name: "remote_react",
+      port: 3001,
+      exposes: {
+        "./mount": "./src/mount.tsx",
+      },
+    });
+
+    expect(cssRules(config).some(ruleUsesPostcss)).toBe(true);
+  });
+
+  it("resolves the PostCSS loader from the shared Rspack config package", () => {
+    const config = createReactRemoteConfig({
+      appDir: "/workspace/apps/remote-react",
+      name: "remote_react",
+      port: 3001,
+      exposes: {
+        "./mount": "./src/mount.tsx",
+      },
+    });
+    const postcssRule = cssRules(config).find(ruleUsesPostcss) as {
+      use: Array<string | { loader?: string }>;
+    };
+    const postcssUse = postcssRule.use.find(
+      (useItem) =>
+        typeof useItem === "object" &&
+        useItem.loader?.includes("postcss-loader"),
+    ) as { loader: string };
+
+    expect(postcssUse.loader).not.toBe("postcss-loader");
+    expect(postcssUse.loader).toContain("postcss-loader");
+  });
+
+  it("does not enable CSS selector prefixing for hosts", () => {
+    const config = createReactHostConfig({
+      appDir: "/workspace/apps/shell-react",
+      name: "shell_react",
+      port: 3000,
+      remotes: {
+        remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
+      },
+    });
+
+    expect(cssRules(config).some(ruleUsesPostcss)).toBe(false);
   });
 
   it("uses business-provided shared UI config for production remotes", () => {

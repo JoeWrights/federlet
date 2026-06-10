@@ -1,7 +1,18 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { scheduleRemoteUnmount } from "./RemoteAppBoundary";
+import {
+  createRemoteContainerClassName,
+  scheduleRemoteUnmount,
+} from "./RemoteAppBoundary";
+
+describe("createRemoteContainerClassName", () => {
+  it("adds a stable style isolation scope class for the remote container", () => {
+    expect(createRemoteContainerClassName("remote_react")).toBe(
+      "remote-boundary__container federlet-scope-remote-react",
+    );
+  });
+});
 
 describe("scheduleRemoteUnmount", () => {
   afterEach(() => {

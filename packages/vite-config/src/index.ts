@@ -1,5 +1,9 @@
 import * as path from "node:path";
 import { federation } from "@module-federation/vite";
+import {
+  createRemoteScopeClass,
+  createStyleIsolationPostcssPlugin,
+} from "@federlet/style-isolation";
 import react from "@vitejs/plugin-react";
 import * as vuePluginModule from "@vitejs/plugin-vue";
 import { defineConfig, type Plugin, type PluginOption, type UserConfig } from "vite";
@@ -17,6 +21,12 @@ type SharedConfig = Record<
     requiredVersion: string;
   }
 >;
+
+type StyleIsolationConfig =
+  | boolean
+  | {
+      scopeClass?: string;
+    };
 
 interface ViteRemoteConfigItem {
   type: string;
@@ -42,6 +52,9 @@ export interface BaseAppConfigOptions {
 
   /** 静态资源 publicPath，Shell 子路由刷新时通常需要显式传 `/`。 */
   publicPath?: string;
+
+  /** 构建期 CSS selector 前缀化配置。Host 默认关闭，remote 默认开启。 */
+  styleIsolation?: StyleIsolationConfig;
 }
 
 export interface HostConfigOptions extends BaseAppConfigOptions {
@@ -83,6 +96,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
     "@federlet/shared-ui": path.resolve(
       root,
       "packages/shared-ui/src/index.ts",
+    ),
+    "@federlet/style-isolation": path.resolve(
+      root,
+      "packages/style-isolation/src/index.ts",
     ),
   };
 }
@@ -167,6 +184,23 @@ function viteRemotes(
   );
 }
 
+function resolveStyleIsolation(
+  options: BaseAppConfigOptions,
+): { scopeClass: string } | null {
+  if (!options.styleIsolation) {
+    return null;
+  }
+
+  const configuredScopeClass =
+    typeof options.styleIsolation === "object"
+      ? options.styleIsolation.scopeClass
+      : undefined;
+
+  return {
+    scopeClass: configuredScopeClass ?? createRemoteScopeClass(options.name),
+  };
+}
+
 /**
  * 创建基础配置
  * @param options 基础配置选项
@@ -178,6 +212,7 @@ function createBaseConfig(
   framework: "react" | "vue",
 ): UserConfig {
   const entry = options.entry ?? (framework === "react" ? "src/main.tsx" : "src/main.ts");
+  const styleIsolation = resolveStyleIsolation(options);
 
   return {
     root: options.appDir,
@@ -203,6 +238,19 @@ function createBaseConfig(
       target: "esnext",
       cssCodeSplit: false,
     },
+    ...(styleIsolation
+      ? {
+          css: {
+            postcss: {
+              plugins: [
+                createStyleIsolationPostcssPlugin({
+                  scopeClass: styleIsolation.scopeClass,
+                }),
+              ],
+            },
+          },
+        }
+      : {}),
     plugins: [
       framework === "react" ? react() : vue(),
       htmlEntryPlugin(entry),
@@ -264,7 +312,13 @@ export function createReactHostConfig(options: HostConfigOptions): UserConfig {
  * @returns React Remote 配置
  */
 export function createReactRemoteConfig(options: RemoteConfigOptions): UserConfig {
-  const config = createBaseConfig(options, "react");
+  const config = createBaseConfig(
+    {
+      ...options,
+      styleIsolation: options.styleIsolation ?? true,
+    },
+    "react",
+  );
 
   return defineConfig({
     ...config,
@@ -288,7 +342,13 @@ export function createReactRemoteConfig(options: RemoteConfigOptions): UserConfi
  * @returns Vue Remote 配置
  */
 export function createVueRemoteConfig(options: RemoteConfigOptions): UserConfig {
-  const config = createBaseConfig(options, "vue");
+  const config = createBaseConfig(
+    {
+      ...options,
+      styleIsolation: options.styleIsolation ?? true,
+    },
+    "vue",
+  );
 
   return defineConfig({
     ...config,

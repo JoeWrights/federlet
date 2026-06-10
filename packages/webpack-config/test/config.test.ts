@@ -22,6 +22,10 @@ function pluginNames(config: ReturnType<typeof createReactHostConfig>) {
   return (config.plugins ?? []).map((plugin) => plugin && "name" in plugin && plugin.name);
 }
 
+function configUsesPostcss(config: ReturnType<typeof createReactRemoteConfig>) {
+  return JSON.stringify(config.module?.rules).includes("postcss-loader");
+}
+
 describe("webpack config factories", () => {
   it("creates a React host config with dev server, aliases and federation settings", () => {
     const config = createReactHostConfig({
@@ -111,6 +115,20 @@ describe("webpack config factories", () => {
       dts: false,
       manifest: false,
     });
+    expect(configUsesPostcss(config)).toBe(true);
+  });
+
+  it("does not enable CSS selector prefixing for hosts", () => {
+    const config = createReactHostConfig({
+      appDir,
+      name: "shell_react",
+      port: 3000,
+      remotes: {
+        remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
+      },
+    });
+
+    expect(configUsesPostcss(config)).toBe(false);
   });
 
   it("creates a Vue remote config with Vue entry and loader defaults", () => {

@@ -20,6 +20,7 @@
   "dependencies": {
     "@federlet/mf-runtime": "workspace:*",
     "@federlet/shared-types": "workspace:*",
+    "@federlet/style-isolation": "workspace:*",
     "@federlet/shared-ui": "workspace:*",
     "antd": "5",
     "react": "^19.2.1",

@@ -19,6 +19,22 @@ function pluginNames(config: ReturnType<typeof createReactHostConfig>) {
   return (config.plugins ?? []).map((plugin) => plugin && "name" in plugin && plugin.name);
 }
 
+function postcssPluginNames(config: ReturnType<typeof createReactRemoteConfig>) {
+  const postcssOptions = config.css?.postcss;
+
+  if (!postcssOptions || typeof postcssOptions === "string") {
+    return [];
+  }
+
+  return (postcssOptions.plugins ?? []).map((plugin) => {
+    if (plugin && typeof plugin === "object" && "postcssPlugin" in plugin) {
+      return plugin.postcssPlugin;
+    }
+
+    return undefined;
+  });
+}
+
 describe("vite config factories", () => {
   beforeEach(() => {
     federationMock.mockClear();
@@ -136,6 +152,20 @@ describe("vite config factories", () => {
       dts: false,
       manifest: false,
     });
+    expect(postcssPluginNames(config)).toContain("federlet-style-isolation");
+  });
+
+  it("does not enable CSS selector prefixing for hosts", () => {
+    const config = createReactHostConfig({
+      appDir,
+      name: "shell_react",
+      port: 3000,
+      remotes: {
+        remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
+      },
+    });
+
+    expect(postcssPluginNames(config)).not.toContain("federlet-style-isolation");
   });
 
   it("creates a Vue remote config with Vue plugin and shared Vue singleton", () => {

@@ -6,8 +6,18 @@ import {
   pluginModuleFederation,
   type ModuleFederationOptions,
 } from "@module-federation/rsbuild-plugin";
+import {
+  createRemoteScopeClass,
+  createStyleIsolationPostcssPlugin,
+} from "@federlet/style-isolation";
 
 type SharedConfig = NonNullable<ModuleFederationOptions["shared"]>;
+
+type StyleIsolationConfig =
+  | boolean
+  | {
+      scopeClass?: string;
+    };
 
 export interface BaseAppConfigOptions {
   /** 当前应用目录，所有入口、模板和输出路径都以它为基准解析。 */
@@ -24,6 +34,9 @@ export interface BaseAppConfigOptions {
 
   /** 静态资源 publicPath，Shell 子路由刷新时通常需要显式传 `/`。 */
   publicPath?: string;
+
+  /** 构建期 CSS selector 前缀化配置。Host 默认关闭，remote 默认开启。 */
+  styleIsolation?: StyleIsolationConfig;
 }
 
 export interface HostConfigOptions extends BaseAppConfigOptions {
@@ -56,6 +69,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/shared-ui/src/index.ts",
     ),
+    "@federlet/style-isolation": path.resolve(
+      root,
+      "packages/style-isolation/src/index.ts",
+    ),
   };
 }
 
@@ -81,10 +98,28 @@ function vueShared(): SharedConfig {
   };
 }
 
+function resolveStyleIsolation(
+  options: BaseAppConfigOptions,
+): { scopeClass: string } | null {
+  if (!options.styleIsolation) {
+    return null;
+  }
+
+  const configuredScopeClass =
+    typeof options.styleIsolation === "object"
+      ? options.styleIsolation.scopeClass
+      : undefined;
+
+  return {
+    scopeClass: configuredScopeClass ?? createRemoteScopeClass(options.name),
+  };
+}
+
 function createBaseConfig(
   options: BaseAppConfigOptions,
   framework: "react" | "vue",
 ): RsbuildConfig {
+  const styleIsolation = resolveStyleIsolation(options);
   const extensions =
     framework === "vue"
       ? [".vue", ".tsx", ".ts", ".jsx", ".js", ".json"]
@@ -129,6 +164,19 @@ function createBaseConfig(
       },
     },
     tools: {
+      ...(styleIsolation
+        ? {
+            postcss: {
+              postcssOptions: {
+                plugins: [
+                  createStyleIsolationPostcssPlugin({
+                    scopeClass: styleIsolation.scopeClass,
+                  }),
+                ],
+              },
+            },
+          }
+        : {}),
       rspack(config) {
         // Federated remotes need real async chunks for their own internal routes in dev.
         config.lazyCompilation = false;
@@ -159,7 +207,13 @@ export function createReactHostConfig(options: HostConfigOptions): RsbuildConfig
 export function createReactRemoteConfig(
   options: RemoteConfigOptions,
 ): RsbuildConfig {
-  const config = createBaseConfig(options, "react");
+  const config = createBaseConfig(
+    {
+      ...options,
+      styleIsolation: options.styleIsolation ?? true,
+    },
+    "react",
+  );
 
   return defineConfig({
     ...config,
@@ -182,6 +236,7 @@ export function createVueRemoteConfig(options: RemoteConfigOptions): RsbuildConf
     {
       ...options,
       entry: options.entry ?? "src/main.ts",
+      styleIsolation: options.styleIsolation ?? true,
     },
     "vue",
   );
