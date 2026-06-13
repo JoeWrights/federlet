@@ -134,4 +134,16 @@ styleIsolation?: boolean | {
 - `@federlet/style-isolation` 单测覆盖 class 派生、容器 class 拼接、CSS 文件过滤和 selector 前缀化。
 - Shell 测试覆盖 remote 容器 class 生成。
 - 各构建配置包测试覆盖 remote 默认启用样式隔离，host 不启用。
-- 后续补污染检测测试，禁止 remote 业务 CSS 使用裸 `body`、`:root` 等 document 级 selector。
+- `@federlet/style-isolation` 单测覆盖污染检测规则，禁止 remote 业务 CSS 使用裸 `body`、`:root`、`html`、`#root`、`#app` 或 `:global(...)` 等会逃出容器的 selector。
+- 构建后运行 `pnpm check:styles`，扫描 remote `dist/**/*.css`，确认业务 selector 已加 `.federlet-scope-<remote>` 前缀。该命令需要先运行 `pnpm build`。
+- Shell 运行时 smoke 覆盖动态 `<style>` 注入：remote 注入的内联样式必须限定在自身 scope class 下，避免 Portal、Toast、Modal 等运行时样式污染 Shell 或其他 remote。
+
+## 污染检测规则
+
+检测能力分为三层：
+
+1. 源码级检测：`detectGlobalStylePollution(css, { scopeClass })` 返回结构化问题列表。`document-level-selector`、`global-root-selector`、`global-pseudo-selector` 为 error；`global-font-face`、`global-keyframes` 为 warn。
+2. 产物级检测：`detectUnscopedStyleSelectors(css, { scopeClass })` 用于构建后 CSS，普通业务 selector 必须以当前 remote 的 scope class 开头；兼容 legacy 项目时，可以显式配置 `allowedSelectorPrefixes` 放行已约定的 remote namespace，例如 Umi legacy 的 `.umi-remote`。
+3. 运行时检测：`detectRuntimeStylePollution({ root, remoteName, scopeClass })` 扫描 `<style>` 标签内容，捕捉动态插入的未 scoped selector。
+
+污染检测的失败项应作为 CI 阻断项；warn 先用于提示跨 remote 命名冲突风险，后续可按团队规范升级为 error。

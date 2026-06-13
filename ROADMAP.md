@@ -68,8 +68,8 @@
 
 ## 阶段四：样式、隔离与安全
 
-- [ ] 样式隔离策略：先选 CSS Modules、命名空间、Shadow DOM 或约定式隔离。
-- [ ] 全局样式污染检测。
+- [x] 样式隔离策略：先选 CSS Modules、命名空间、Shadow DOM 或约定式隔离。
+- [x] 全局样式污染检测。
 - [ ] remote DOM 容器隔离规范。
 - [ ] 第三方依赖共享白名单。
 - [ ] React、Vue singleton 策略文档化。
