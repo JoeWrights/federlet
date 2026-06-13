@@ -1,14 +1,25 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { mountRemoteApp } from "@federlet/mf-runtime";
 import {
   createRemoteScopeClass,
   detectRuntimeStylePollution,
 } from "@federlet/style-isolation";
 import {
   createRemoteContainerClassName,
+  RemoteAppBoundary,
+  reportRemoteDomEscapes,
   scheduleRemoteUnmount,
 } from "./RemoteAppBoundary";
+
+vi.mock("@federlet/mf-runtime", () => ({
+  mountRemoteApp: vi.fn(),
+}));
+
+const mockedMountRemoteApp = vi.mocked(mountRemoteApp);
 
 describe("createRemoteContainerClassName", () => {
   it("adds a stable style isolation scope class for the remote container", () => {
@@ -83,5 +94,104 @@ describe("detectRuntimeStylePollution", () => {
         scopeClass: createRemoteScopeClass("remote_react"),
       }),
     ).toEqual([]);
+  });
+});
+
+describe("reportRemoteDomEscapes", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
+  });
+
+  it("logs DOM escapes without throwing", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const node = document.createElement("div");
+
+    expect(() =>
+      reportRemoteDomEscapes([
+        {
+          node,
+          phase: "mount",
+          reason: "node-outside-remote-container",
+          remoteName: "remote_react",
+        },
+      ]),
+    ).not.toThrow();
+
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("Remote remote_react created DOM outside its container during mount"),
+      expect.objectContaining({
+        node,
+        phase: "mount",
+        reason: "node-outside-remote-container",
+        remoteName: "remote_react",
+      }),
+    );
+  });
+});
+
+describe("RemoteAppBoundary DOM escape diagnostics", () => {
+  let root: Root | null = null;
+
+  afterEach(() => {
+    root?.unmount();
+    root = null;
+    document.body.innerHTML = "";
+    mockedMountRemoteApp.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it("reports remote DOM escapes without blocking the remote render", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    const leakedNode = document.createElement("div");
+    leakedNode.className = "remote-toast";
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    mockedMountRemoteApp.mockImplementation(async (_route, context) => {
+      context.container.append(document.createElement("p"));
+      document.body.append(leakedNode);
+
+      return {
+        unmount() {
+          leakedNode.remove();
+        },
+      };
+    });
+
+    await act(async () => {
+      root?.render(
+        <RemoteAppBoundary
+          route={{
+            basename: "/react",
+            exposedModule: "./mount",
+            id: "react-dashboard",
+            path: "/react/*",
+            remoteName: "remote_react",
+            title: "React Remote",
+          }}
+        />,
+      );
+    });
+
+    expect(document.body.contains(leakedNode)).toBe(true);
+    expect(document.querySelector(".remote-boundary__header span")?.textContent)
+      .toBe("ready");
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Remote remote_react created DOM outside its container during mount",
+      ),
+      expect.objectContaining({
+        node: leakedNode,
+        phase: "mount",
+        reason: "node-outside-remote-container",
+        remoteName: "remote_react",
+      }),
+    );
   });
 });

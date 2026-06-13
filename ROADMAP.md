@@ -70,7 +70,9 @@
 
 - [x] 样式隔离策略：先选 CSS Modules、命名空间、Shadow DOM 或约定式隔离。
 - [x] 全局样式污染检测。
-- [ ] remote DOM 容器隔离规范。
+- [x] remote DOM 容器隔离规范：见 `docs/remote-dom-container-isolation.md`。
+- [ ] JS 运行时隔离/沙箱策略：明确是否采用快照沙箱、Proxy 沙箱、iframe 沙箱或无沙箱约束。
+- [ ] remote 全局副作用治理：限制 `window`、`document`、全局事件、定时器、存储等资源使用和清理。
 - [ ] 第三方依赖共享白名单。
 - [ ] React、Vue singleton 策略文档化。
 - [ ] 老项目兼容策略：例如 Umi React 17 不共享 React runtime。

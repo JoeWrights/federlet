@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { mountRemoteApp } from "@federlet/mf-runtime";
 import {
+  captureRemoteDomSnapshot,
   createRemoteContainerClassName as createScopedRemoteContainerClassName,
+  detectRemoteDomEscapes,
+} from "@federlet/style-isolation";
+import type {
+  RemoteDomEscapeIssue,
+  RemoteDomSnapshot,
 } from "@federlet/style-isolation";
 import type {
   MicroAppInstance,
@@ -12,15 +18,40 @@ interface RemoteAppBoundaryProps {
   route: RemoteRouteConfig;
 }
 
-export function scheduleRemoteUnmount(instance: MicroAppInstance | null) {
+function shouldReportRemoteDomEscapes() {
+  return process.env.NODE_ENV !== "production";
+}
+
+export function reportRemoteDomEscapes(issues: RemoteDomEscapeIssue[]) {
+  if (!shouldReportRemoteDomEscapes()) {
+    return;
+  }
+
+  for (const issue of issues) {
+    console.error(
+      `Remote ${issue.remoteName} created DOM outside its container during ${issue.phase}`,
+      issue,
+    );
+  }
+}
+
+export function scheduleRemoteUnmount(
+  instance: MicroAppInstance | null,
+  afterUnmount?: () => void,
+) {
   if (!instance) {
+    afterUnmount?.();
     return;
   }
 
   window.setTimeout(() => {
-    void Promise.resolve(instance.unmount()).catch((error: unknown) => {
-      console.error("Failed to unmount remote app", error);
-    });
+    void Promise.resolve(instance.unmount())
+      .catch((error: unknown) => {
+        console.error("Failed to unmount remote app", error);
+      })
+      .finally(() => {
+        afterUnmount?.();
+      });
   }, 0);
 }
 
@@ -40,6 +71,7 @@ export function createRemoteContainerClassName(remoteName: string) {
 export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<MicroAppInstance | null>(null);
+  const domSnapshotRef = useRef<RemoteDomSnapshot | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -56,6 +88,10 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
       setStatus("loading");
 
       try {
+        const domSnapshot = captureRemoteDomSnapshot({
+          container: containerRef.current,
+        });
+        domSnapshotRef.current = domSnapshot;
         // Shell 只注入协议上下文，不直接依赖 remote 内部框架实现。
         const instance = await mountRemoteApp(route, {
           basename: route.basename,
@@ -71,6 +107,14 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
           return;
         }
 
+        reportRemoteDomEscapes(
+          detectRemoteDomEscapes({
+            container: containerRef.current,
+            phase: "mount",
+            remoteName: route.remoteName,
+            snapshot: domSnapshot,
+          }),
+        );
         instanceRef.current = instance;
         setStatus("ready");
       } catch (error) {
@@ -87,9 +131,25 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
     return () => {
       cancelled = true;
       const instance = instanceRef.current;
+      const domSnapshot = domSnapshotRef.current;
+      const container = containerRef.current;
       instanceRef.current = null;
+      domSnapshotRef.current = null;
       // 路由切换或组件卸载时，把清理动作交还给 remote 自己完成。
-      scheduleRemoteUnmount(instance);
+      scheduleRemoteUnmount(instance, () => {
+        if (!container || !domSnapshot) {
+          return;
+        }
+
+        reportRemoteDomEscapes(
+          detectRemoteDomEscapes({
+            container,
+            phase: "unmount",
+            remoteName: route.remoteName,
+            snapshot: domSnapshot,
+          }),
+        );
+      });
     };
   }, [route, retryKey]);
 

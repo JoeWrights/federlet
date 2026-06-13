@@ -49,7 +49,7 @@ describe("OverviewPage", () => {
     );
   });
 
-  it("mounts shared UI modal inside the shell remote container", () => {
+  it("mounts the Ant Design modal inside the shell remote container", () => {
     const shellRemoteContainer = document.createElement("div");
     shellRemoteContainer.className = "remote-boundary__container";
     document.body.append(shellRemoteContainer);
@@ -65,7 +65,13 @@ describe("OverviewPage", () => {
     const dialog = shellRemoteContainer.querySelector('[role="dialog"]');
 
     expect(dialog).not.toBeNull();
-    expect(dialog?.textContent).toContain("Shell-scoped shared modal");
+    expect(dialog?.textContent).toContain("Shell-scoped Ant Design modal");
+    expect(
+      shellRemoteContainer.querySelector(
+        ".federlet-scope-remote-react-ant-modal-root",
+      ),
+    ).not.toBeNull();
+    expect(shellRemoteContainer.querySelector(".ant-modal-root")).toBeNull();
     expect(document.body.querySelector('[role="dialog"]')).toBe(dialog);
   });
 });

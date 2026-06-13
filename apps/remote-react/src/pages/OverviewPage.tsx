@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Alert } from "antd";
+import { Alert, Modal as AntdModal } from "antd";
 import {
   MetricTile,
-  Modal,
   SharedButton,
   SharedCard,
 } from "@federlet/shared-ui";
@@ -32,15 +31,16 @@ export default function OverviewPage() {
         showIcon
       />
 
-      <Modal
+      <AntdModal
         open={isModalOpen}
-        title="Shell-scoped shared modal"
-        onClose={() => setIsModalOpen(false)}
-        getContainer={() => portalContainer ?? null}
+        title="Shell-scoped Ant Design modal"
+        footer={null}
+        onCancel={() => setIsModalOpen(false)}
+        getContainer={() => portalContainer ?? document.body}
       >
-        This modal is rendered by @federlet/shared-ui, but its portal is scoped
-        to the Shell remote mount container.
-      </Modal>
+        This modal is rendered by Ant Design, but its portal is scoped to the
+        Shell remote mount container.
+      </AntdModal>
     </section>
   );
 }

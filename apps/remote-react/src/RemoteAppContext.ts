@@ -4,6 +4,7 @@ import {
   useContext,
   type ReactNode,
 } from "react";
+import { ConfigProvider } from "antd";
 
 interface RemoteAppContextValue {
   portalContainer?: HTMLElement;
@@ -22,7 +23,15 @@ export function RemoteAppProvider({
   return createElement(
     RemoteAppContext.Provider,
     { value: { portalContainer } },
-    children,
+    createElement(
+      ConfigProvider,
+      {
+        getPopupContainer: () => portalContainer ?? document.body,
+        iconPrefixCls: "federlet-scope-remote-react-anticon",
+        prefixCls: "federlet-scope-remote-react-ant",
+      },
+      children,
+    ),
   );
 }
 

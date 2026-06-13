@@ -17,6 +17,7 @@ export function mount(context: MicroAppContext): MicroAppInstance {
             ? context.props.mountedAt
             : undefined
         }
+        portalContainer={context.container}
       />
     </BrowserRouter>,
     context.container,
