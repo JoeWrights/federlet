@@ -74,8 +74,8 @@
 - [ ] JS 运行时隔离/沙箱策略：明确是否采用快照沙箱、Proxy 沙箱、iframe 沙箱或无沙箱约束。
 - [ ] remote 全局副作用治理：限制 `window`、`document`、全局事件、定时器、存储等资源使用和清理。
 - [ ] 第三方依赖共享白名单。
-- [ ] React、Vue singleton 策略文档化。
-- [ ] 老项目兼容策略：例如 Umi React 17 不共享 React runtime。
+- [x] React、Vue singleton 策略文档化：见 `docs/shared-runtime-strategy.md`。
+- [x] 老项目兼容策略：例如 Umi React 17 不共享 React runtime，见 `docs/shared-runtime-strategy.md`。
 - [ ] 权限模型：Shell 统一下发用户、权限、租户等上下文。
 - [ ] remote 权限边界：remote 不直接读取全局敏感状态。
 - [ ] CSP 和脚本来源治理。

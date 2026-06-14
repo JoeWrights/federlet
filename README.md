@@ -99,7 +99,7 @@ pnpm clean
 
 1. 确保 Umi 版本支持 `webpack5: {}`，并在 `chainWebpack` 中注入 `webpack.container.ModuleFederationPlugin`。
 2. 暴露 `./mount`，在其中接收 Shell 传入的 `container` 和 `basename`。
-3. 如果 Umi 项目使用 React 17，而 Shell 使用 React 19，优先不要共享 `react` 和 `react-dom`，让 Umi remote 独立打包自己的 React runtime。
+3. 如果 Umi 项目使用 React 17，而 Shell 使用 React 19，优先不要共享 `react` 和 `react-dom`，让 Umi remote 独立打包自己的 React runtime。详见 [共享运行时策略](docs/shared-runtime-strategy.md)。
 4. Node 18+ 下如果遇到旧 Webpack hash 的 OpenSSL 错误，可在 Umi 脚本中设置 `NODE_OPTIONS=--openssl-legacy-provider`。
 5. 如果 Umi remote 内部使用 `React.lazy` 或动态路由，需要开启 `dynamicImport: {}`，否则 Umi 可能把动态 import 提前打进主包，路由懒加载不会生效。
 
