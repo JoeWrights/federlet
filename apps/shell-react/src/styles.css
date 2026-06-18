@@ -116,6 +116,61 @@ button {
   font-size: 22px;
 }
 
+.sandbox-risk-panel {
+  max-width: 780px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  margin-top: 28px;
+  padding: 24px;
+  background: #fff7ed;
+  box-shadow: 0 18px 40px rgb(127 29 29 / 10%);
+}
+
+.sandbox-risk-panel h2 {
+  margin: 0;
+  color: #7f1d1d;
+}
+
+.sandbox-risk-panel p {
+  max-width: 680px;
+  color: #92400e;
+}
+
+.sandbox-risk-panel small {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.sandbox-risk-panel dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.sandbox-risk-panel dl > div {
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.sandbox-risk-panel dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sandbox-risk-panel dd {
+  margin: 6px 0 0;
+  color: #15803d;
+  font-weight: 800;
+}
+
+.sandbox-risk-panel dd.is-detected {
+  color: #b91c1c;
+}
+
 .remote-boundary__header {
   display: flex;
   align-items: center;
