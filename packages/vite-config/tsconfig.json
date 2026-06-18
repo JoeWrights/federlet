@@ -1,0 +1,3 @@
+{
+  "extends": "@federlet/tsconfig/library.json"
+}

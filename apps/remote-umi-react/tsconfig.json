@@ -1,0 +1,8 @@
+{
+  "extends": "@federlet/tsconfig/react.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "jsx": "react"
+  },
+  "include": ["config", "src"]
+}

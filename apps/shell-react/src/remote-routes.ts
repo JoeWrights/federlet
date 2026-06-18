@@ -23,4 +23,12 @@ export const remoteRoutes: RemoteRouteConfig[] = [
     exposedModule: "./mount",
     basename: "/vue",
   },
+  {
+    id: "umi-react",
+    path: "/umi/*",
+    title: "Umi React Remote",
+    remoteName: "remote_umi_react",
+    exposedModule: "./mount",
+    basename: "/umi",
+  },
 ];

@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { mountRemoteApp } from "@federlet/mf-runtime";
+import {
+  captureRemoteDomSnapshot,
+  createRemoteContainerClassName as createScopedRemoteContainerClassName,
+  detectRemoteDomEscapes,
+} from "@federlet/style-isolation";
+import type {
+  RemoteDomEscapeIssue,
+  RemoteDomSnapshot,
+} from "@federlet/style-isolation";
 import type {
   MicroAppInstance,
   RemoteRouteConfig,
@@ -7,6 +16,50 @@ import type {
 
 interface RemoteAppBoundaryProps {
   route: RemoteRouteConfig;
+}
+
+function shouldReportRemoteDomEscapes() {
+  return process.env.NODE_ENV !== "production";
+}
+
+export function reportRemoteDomEscapes(issues: RemoteDomEscapeIssue[]) {
+  if (!shouldReportRemoteDomEscapes()) {
+    return;
+  }
+
+  for (const issue of issues) {
+    console.error(
+      `Remote ${issue.remoteName} created DOM outside its container during ${issue.phase}`,
+      issue,
+    );
+  }
+}
+
+export function scheduleRemoteUnmount(
+  instance: MicroAppInstance | null,
+  afterUnmount?: () => void,
+) {
+  if (!instance) {
+    afterUnmount?.();
+    return;
+  }
+
+  window.setTimeout(() => {
+    void Promise.resolve(instance.unmount())
+      .catch((error: unknown) => {
+        console.error("Failed to unmount remote app", error);
+      })
+      .finally(() => {
+        afterUnmount?.();
+      });
+  }, 0);
+}
+
+export function createRemoteContainerClassName(remoteName: string) {
+  return createScopedRemoteContainerClassName(
+    "remote-boundary__container",
+    remoteName,
+  );
 }
 
 /**
@@ -18,6 +71,7 @@ interface RemoteAppBoundaryProps {
 export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<MicroAppInstance | null>(null);
+  const domSnapshotRef = useRef<RemoteDomSnapshot | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -34,6 +88,10 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
       setStatus("loading");
 
       try {
+        const domSnapshot = captureRemoteDomSnapshot({
+          container: containerRef.current,
+        });
+        domSnapshotRef.current = domSnapshot;
         // Shell 只注入协议上下文，不直接依赖 remote 内部框架实现。
         const instance = await mountRemoteApp(route, {
           basename: route.basename,
@@ -45,10 +103,18 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
 
         // 如果加载过程中边界已经卸载，立即释放刚创建的 remote 实例。
         if (cancelled) {
-          void instance.unmount();
+          scheduleRemoteUnmount(instance);
           return;
         }
 
+        reportRemoteDomEscapes(
+          detectRemoteDomEscapes({
+            container: containerRef.current,
+            phase: "mount",
+            remoteName: route.remoteName,
+            snapshot: domSnapshot,
+          }),
+        );
         instanceRef.current = instance;
         setStatus("ready");
       } catch (error) {
@@ -65,9 +131,25 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
     return () => {
       cancelled = true;
       const instance = instanceRef.current;
+      const domSnapshot = domSnapshotRef.current;
+      const container = containerRef.current;
       instanceRef.current = null;
+      domSnapshotRef.current = null;
       // 路由切换或组件卸载时，把清理动作交还给 remote 自己完成。
-      void instance?.unmount();
+      scheduleRemoteUnmount(instance, () => {
+        if (!container || !domSnapshot) {
+          return;
+        }
+
+        reportRemoteDomEscapes(
+          detectRemoteDomEscapes({
+            container,
+            phase: "unmount",
+            remoteName: route.remoteName,
+            snapshot: domSnapshot,
+          }),
+        );
+      });
     };
   }, [route, retryKey]);
 
@@ -91,7 +173,11 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
         </div>
       ) : null}
 
-      <div ref={containerRef} className="remote-boundary__container" />
+      <div
+        ref={containerRef}
+        className={createRemoteContainerClassName(route.remoteName)}
+        data-federlet-remote={route.remoteName}
+      />
     </section>
   );
 }

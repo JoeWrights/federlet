@@ -1,4 +1,5 @@
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import type { RemoteRouteConfig } from "@federlet/shared-types";
 import { RemoteAppBoundary } from "./RemoteAppBoundary";
 import { remoteRoutes } from "./remote-routes";
 
@@ -25,6 +26,15 @@ function HomePage() {
       </div>
     </main>
   );
+}
+
+/**
+ * 创建远程路由元素
+ * @param route 远程路由配置
+ * @returns 远程路由元素
+ */
+export function createRemoteRouteElement(route: RemoteRouteConfig) {
+  return <RemoteAppBoundary key={route.id} route={route} />;
 }
 
 /**
@@ -62,7 +72,7 @@ export function App() {
           <Route
             key={route.id}
             path={route.path}
-            element={<RemoteAppBoundary route={route} />}
+            element={createRemoteRouteElement(route)}
           />
         ))}
         <Route path="*" element={<Navigate to="/" replace />} />

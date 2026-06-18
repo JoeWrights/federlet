@@ -16,15 +16,27 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
+    "dev:rsbuild": "turbo run dev:rsbuild",
+    "dev:vite": "turbo run dev:vite",
+    "dev:webpack": "turbo run dev:webpack",
     "build": "turbo run build",
+    "build:rsbuild": "turbo run build:rsbuild",
+    "build:vite": "turbo run build:vite",
+    "build:webpack": "turbo run build:webpack",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "check:shared-ui": "node scripts/check-shared-ui-compat.mjs",
+    "check:styles": "node scripts/run-with-tsx.mjs node scripts/check-style-pollution.mjs",
     "clean": "turbo run clean"
   },
   "devDependencies": {
     "@module-federation/enhanced": "^0.21.6",
+    "@module-federation/rsbuild-plugin": "^0.21.6",
+    "@rsbuild/core": "^1.7.5",
+    "@rsbuild/plugin-react": "^1.4.6",
+    "@rsbuild/plugin-vue": "^1.2.9",
     "@rspack/cli": "^1.5.8",
     "@rspack/core": "^1.5.8",
     "@rspack/dev-server": "^1.1.4",

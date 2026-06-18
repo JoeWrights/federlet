@@ -1,11 +1,24 @@
+import { createRequire } from "node:module";
 import path from "node:path";
 import { ModuleFederationPlugin } from "@module-federation/enhanced/rspack";
 import { rspack, type Configuration } from "@rspack/core";
+import {
+  createRemoteScopeClass,
+  createStyleIsolationPostcssPlugin,
+} from "@federlet/style-isolation";
 import { VueLoaderPlugin } from "vue-loader";
 
 type SharedConfig = NonNullable<
   ConstructorParameters<typeof ModuleFederationPlugin>[0]["shared"]
 >;
+
+const require = createRequire(import.meta.url);
+
+type StyleIsolationConfig =
+  | boolean
+  | {
+      scopeClass?: string;
+    };
 
 export interface BaseAppConfigOptions {
   /** 当前应用目录，所有入口、模板和输出路径都以它为基准解析。 */
@@ -22,6 +35,12 @@ export interface BaseAppConfigOptions {
 
   /** 静态资源 publicPath，Shell 子路由刷新时通常需要显式传 `/`。 */
   publicPath?: string;
+
+  /** 追加或覆盖 Module Federation shared 依赖配置。 */
+  shared?: SharedConfig;
+
+  /** 构建期 CSS selector 前缀化配置。Host 默认关闭，remote 默认开启。 */
+  styleIsolation?: StyleIsolationConfig;
 }
 
 /**
@@ -66,6 +85,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/shared-ui/src/index.ts",
     ),
+    "@federlet/style-isolation": path.resolve(
+      root,
+      "packages/style-isolation/src/index.ts",
+    ),
   };
 }
 
@@ -91,6 +114,78 @@ function vueShared(): SharedConfig {
       requiredVersion: "^3.5.25",
     },
   };
+}
+
+function mergeShared(defaultShared: SharedConfig, overrideShared?: SharedConfig) {
+  return {
+    ...defaultShared,
+    ...(overrideShared ?? {}),
+  };
+}
+
+function resolveStyleIsolation(
+  options: BaseAppConfigOptions,
+): { scopeClass: string } | null {
+  if (!options.styleIsolation) {
+    return null;
+  }
+
+  const configuredScopeClass =
+    typeof options.styleIsolation === "object"
+      ? options.styleIsolation.scopeClass
+      : undefined;
+
+  return {
+    scopeClass: configuredScopeClass ?? createRemoteScopeClass(options.name),
+  };
+}
+
+function cssRules(options: BaseAppConfigOptions) {
+  const styleIsolation = resolveStyleIsolation(options);
+  const styleLoader = require.resolve("style-loader");
+  const cssLoader = require.resolve("css-loader");
+
+  if (!styleIsolation) {
+    return [
+      {
+        test: /\.css$/,
+        use: [styleLoader, cssLoader],
+      },
+    ];
+  }
+
+  return [
+    {
+      test: /\.css$/,
+      exclude: /node_modules/,
+      use: [
+        styleLoader,
+        {
+          loader: cssLoader,
+          options: {
+            importLoaders: 1,
+          },
+        },
+        {
+          loader: require.resolve("postcss-loader"),
+          options: {
+            postcssOptions: {
+              plugins: [
+                createStyleIsolationPostcssPlugin({
+                  scopeClass: styleIsolation.scopeClass,
+                }),
+              ],
+            },
+          },
+        },
+      ],
+    },
+    {
+      test: /\.css$/,
+      include: /node_modules/,
+      use: [styleLoader, cssLoader],
+    },
+  ];
 }
 
 /**
@@ -153,10 +248,7 @@ function createBaseConfig(
             },
           },
         },
-        {
-          test: /\.css$/,
-          use: ["style-loader", "css-loader"],
-        },
+        ...cssRules(options),
       ],
     },
     plugins: [
@@ -172,6 +264,9 @@ function createBaseConfig(
         "Access-Control-Allow-Origin": "*",
       },
     },
+    // Module Federation remote 内部路由懒加载需要普通 async chunk，
+    // Rspack dev 默认会对 import() 启用 lazy-compilation proxy，容易让 Suspense 一直停在 fallback。
+    lazyCompilation: false,
     performance: {
       hints: false,
     },
@@ -193,7 +288,7 @@ export function createReactHostConfig(options: HostConfigOptions): Configuration
     new ModuleFederationPlugin({
       name: options.name,
       remotes: options.remotes,
-      shared: reactShared(),
+      shared: mergeShared(reactShared(), options.shared),
       dts: false,
       manifest: false,
     }),
@@ -208,7 +303,13 @@ export function createReactHostConfig(options: HostConfigOptions): Configuration
 export function createReactRemoteConfig(
   options: RemoteConfigOptions,
 ): Configuration {
-  const config = createBaseConfig(options, "react");
+  const config = createBaseConfig(
+    {
+      ...options,
+      styleIsolation: options.styleIsolation ?? true,
+    },
+    "react",
+  );
 
   config.plugins = [
     ...(config.plugins ?? []),
@@ -216,7 +317,7 @@ export function createReactRemoteConfig(
       name: options.name,
       filename: "remoteEntry.js",
       exposes: options.exposes,
-      shared: reactShared(),
+      shared: mergeShared(reactShared(), options.shared),
       dts: false,
       manifest: false,
     }),
@@ -233,6 +334,7 @@ export function createVueRemoteConfig(options: RemoteConfigOptions): Configurati
     {
       ...options,
       entry: options.entry ?? "src/main.ts",
+      styleIsolation: options.styleIsolation ?? true,
     },
     "vue",
   );
@@ -243,7 +345,7 @@ export function createVueRemoteConfig(options: RemoteConfigOptions): Configurati
       name: options.name,
       filename: "remoteEntry.js",
       exposes: options.exposes,
-      shared: vueShared(),
+      shared: mergeShared(vueShared(), options.shared),
       dts: false,
       manifest: false,
     }),

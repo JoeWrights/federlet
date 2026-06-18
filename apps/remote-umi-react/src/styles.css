@@ -1,0 +1,112 @@
+.umi-remote {
+  min-height: 320px;
+  border-radius: 24px;
+  padding: 32px;
+  color: #14213d;
+  background:
+    radial-gradient(circle at top right, rgba(67, 97, 238, 0.2), transparent 28%),
+    linear-gradient(135deg, #ffffff 0%, #edf2ff 100%);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+}
+
+.umi-remote__eyebrow {
+  margin: 0 0 8px;
+  color: #4361ee;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.umi-remote h1 {
+  margin: 0 0 12px;
+  font-size: 34px;
+}
+
+.umi-remote p {
+  max-width: 680px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.umi-remote__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.umi-remote__grid article {
+  border: 1px solid rgba(67, 97, 238, 0.18);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.umi-remote__grid span {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.umi-remote__grid strong {
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.umi-remote__tabs {
+  display: inline-flex;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(67, 97, 238, 0.08);
+}
+
+.umi-remote__tab {
+  border-radius: 999px;
+  padding: 8px 16px;
+  color: #3b4cca;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.umi-remote__tab--active {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(67, 97, 238, 0.18);
+}
+
+.umi-remote__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  border-radius: 20px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.umi-remote__panel strong {
+  color: #1d2b6f;
+  font-size: 28px;
+}
+
+.umi-remote__panel span {
+  color: #475569;
+}
+
+.umi-remote__loading {
+  margin-top: 18px;
+  border-radius: 20px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #3b4cca;
+  font-weight: 700;
+}
+
+.umi-remote__footnote {
+  margin-top: 24px;
+  font-size: 13px;
+}
