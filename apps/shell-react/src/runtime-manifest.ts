@@ -7,12 +7,6 @@ import type {
   RuntimeRemoteRouteConfig,
 } from "@federlet/shared-types";
 
-declare global {
-  interface Window {
-    __FEDERLET_ENV__?: FederletRuntimeEnvironment;
-  }
-}
-
 /**
  * 加载运行时 remote 路由的选项。
  */

@@ -9,12 +9,6 @@ type RuntimeEnvironmentTarget = {
   __FEDERLET_ENV__?: FederletRuntimeEnvironment;
 };
 
-declare global {
-  interface Window {
-    __FEDERLET_ENV__?: FederletRuntimeEnvironment;
-  }
-}
-
 /**
  * 创建本地运行时环境。
  * @param _runtimeEnv - 运行时环境。
