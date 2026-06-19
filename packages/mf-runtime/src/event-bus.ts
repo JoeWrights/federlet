@@ -1,3 +1,4 @@
+import mitt from "mitt";
 import type {
   FederletEventListener,
   FederletEventMeta,
@@ -5,20 +6,41 @@ import type {
   MicroEventBus,
 } from "@federlet/shared-types";
 
+/**
+ * 事件总线监听器。
+ */
 type Listener = FederletEventListener<unknown>;
 
+/**
+ * 事件总线传输事件。
+ */
+type EventBusTransportEvent = {
+  meta: FederletEventMeta;
+  payload: unknown;
+};
+type EventBusTransportEvents = Record<string, EventBusTransportEvent>;
+
+/**
+ * 事件总线无效事件。
+ */
 export interface EventBusInvalidEvent {
   eventName: string;
   payload: unknown;
   reason: "invalid-event-name" | "invalid-payload";
 }
 
+/**
+ * 事件总线审计事件。
+ */
 export interface EventBusAuditEvent {
   eventName: string;
   meta: FederletEventMeta;
   payload: unknown;
 }
 
+/**
+ * 创建事件总线选项。
+ */
 export interface CreateEventBusOptions {
   /**
    * 可选 payload 运行时校验器。类型约束由 TypeScript 提供，运行时校验由 Shell 按需注入。
@@ -32,16 +54,28 @@ export interface CreateEventBusOptions {
   now?: () => number;
 }
 
+/**
+ * 事件名称模式。
+ */
 const EVENT_NAME_PATTERN = /^[a-z][a-z0-9]*\.[a-z][a-z0-9]*\.[a-z][a-z0-9]*$/;
 
+/**
+ * 是否为记录类型。
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/**
+ * 是否为字符串数组。
+ */
 function isStringArray(value: unknown) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+/**
+ * 验证联邦事件负载。
+ */
 export const validateFederletEventPayload: FederletEventPayloadValidator = (
   eventName,
   payload,
@@ -69,14 +103,23 @@ export const validateFederletEventPayload: FederletEventPayloadValidator = (
   return true;
 };
 
+/**
+ * 是否为生产环境。
+ */
 function isProduction() {
   return process.env.NODE_ENV === "production";
 }
 
+/**
+ * 是否为有效事件名称。
+ */
 function isValidEventName(eventName: string) {
   return EVENT_NAME_PATTERN.test(eventName);
 }
 
+/**
+ * 报告无效事件。
+ */
 function reportInvalidEvent(
   event: EventBusInvalidEvent,
   options: CreateEventBusOptions,
@@ -104,7 +147,7 @@ function reportInvalidEvent(
 export function createEventBus(
   options: CreateEventBusOptions = {},
 ): MicroEventBus {
-  const listeners = new Map<string, Set<Listener>>();
+  const transport = mitt<EventBusTransportEvents>();
   const now = options.now ?? Date.now;
 
   const eventBus = {
@@ -145,9 +188,10 @@ export function createEventBus(
         timestamp: meta.timestamp ?? now(),
       };
 
-      listeners
-        .get(eventName)
-        ?.forEach((listener) => listener(payload, eventMeta));
+      transport.emit(eventName, {
+        meta: eventMeta,
+        payload,
+      });
 
       options.onAuditEvent?.({
         eventName,
@@ -156,17 +200,15 @@ export function createEventBus(
       });
     },
     on(eventName: string, listener: Listener) {
-      const eventListeners = listeners.get(eventName) ?? new Set<Listener>();
-      eventListeners.add(listener as Listener);
-      listeners.set(eventName, eventListeners);
+      const handler = (event: EventBusTransportEvent) => {
+        listener(event.payload, event.meta);
+      };
+
+      transport.on(eventName, handler);
 
       // 返回取消订阅函数，便于 remote 卸载时清理自己的监听器。
       return () => {
-        eventListeners.delete(listener as Listener);
-
-        if (eventListeners.size === 0) {
-          listeners.delete(eventName);
-        }
+        transport.off(eventName, handler);
       };
     },
   };
