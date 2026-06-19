@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APOLLO_RUNTIME_CONFIG } from "./apollo";
+import { SHELL_REMOTE_PROTOCOL_VERSION } from "./constants";
 import {
   createLocalRuntimeEnvironment,
   injectRuntimeEnvironment,
@@ -25,6 +26,7 @@ describe("runtime environment config", () => {
             path: "/react/*",
             remoteName: "remote_react",
             status: "active",
+            supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
             title: "React Remote",
           },
           {
@@ -34,6 +36,7 @@ describe("runtime environment config", () => {
             path: "/vue/*",
             remoteName: "remote_vue",
             status: "active",
+            supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
             title: "Vue Remote",
           },
           {
@@ -43,6 +46,7 @@ describe("runtime environment config", () => {
             path: "/umi/*",
             remoteName: "remote_umi_react",
             status: "active",
+            supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
             title: "Umi React Remote",
           },
         ],

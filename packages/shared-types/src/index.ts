@@ -99,6 +99,9 @@ export interface RuntimeRemoteManifestItem
   /** remote 站点根地址，运行时会拼接 remoteEntry 文件名和版本参数。 */
   entryBaseUrl?: string;
 
+  /** remote 声明兼容的 Shell 挂载协议版本。 */
+  supportedShellProtocolVersions?: string[];
+
   /** remote 当前是否允许被 Shell 加载。 */
   status?: "active" | "disabled";
 

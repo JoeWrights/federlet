@@ -1,5 +1,8 @@
 import type { FederletRuntimeEnvironment } from "@federlet/shared-types";
-import { DEFAULT_RUNTIME_ENV } from "./constants";
+import {
+  DEFAULT_RUNTIME_ENV,
+  SHELL_REMOTE_PROTOCOL_VERSION,
+} from "./constants";
 
 /**
  * 本地模拟 Apollo 当前集群下发的运行时配置。
@@ -17,6 +20,7 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
         path: "/react/*",
         remoteName: "remote_react",
         status: "active",
+        supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
         title: "React Remote",
       },
       {
@@ -26,6 +30,7 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
         path: "/vue/*",
         remoteName: "remote_vue",
         status: "active",
+        supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
         title: "Vue Remote",
       },
       {
@@ -35,6 +40,7 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
         path: "/umi/*",
         remoteName: "remote_umi_react",
         status: "active",
+        supportedShellProtocolVersions: [SHELL_REMOTE_PROTOCOL_VERSION],
         title: "Umi React Remote",
       },
     ],

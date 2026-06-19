@@ -164,20 +164,36 @@ flowchart TD
 
 ### 方案设计
 
-- 在 manifest 增加：
-  - `protocolVersion`
-  - `shellCompatibility`（如 `>=1.2 <2.0`）
-- Shell 声明自身 `shellProtocolVersion`。
-- `compatCheck(route, shellVersion, remoteCompatibility)` 决定是否放行。
+- 协议版本不是 `remoteEntry` 的构建版本，而是 Shell 与 remote 的生命周期/上下文契约版本。
+- Shell 声明当前支持的 remote 挂载协议版本，例如：
+  - `SHELL_REMOTE_PROTOCOL_VERSION = "1"`
+- remote 在 Apollo manifest 中声明自己兼容的 Shell 协议版本，例如：
+  - `supportedShellProtocolVersions: ["1"]`
+- Shell 加载 manifest 时先做兼容性过滤：
+  - 匹配：注册 remoteEntry，并生成 route。
+  - 不匹配：跳过该 remote，不注册、不挂载，并输出诊断。
+
+协议版本保护的是 `mount(context)` 契约，例如：
+
+- Shell 注入的 `basename`、`container`、`props`、`eventBus` 字段是否符合 remote 预期。
+- remote 返回的实例是否至少支持 `unmount()`。
+- 后续如果 Shell 增加权限、用户上下文、租户上下文、预加载或健康检查等协议字段，可以通过协议版本避免旧 remote 被强行挂载。
+
+它和资源版本的边界：
+
+- `remoteEntry.js` 缓存策略解决“加载哪个构建产物”。
+- 协议版本解决“Shell 和 remote 是否按同一套契约通信”。
 
 ### 与现有代码衔接点
 
-- `packages/mf-runtime/src/loader.ts`：`mountRemoteApp` 前增加兼容判断。
-- `packages/shared-types/src/index.ts`：新增版本约束类型。
+- `apps/shell-react/src/config/constants.ts`：维护 `SHELL_REMOTE_PROTOCOL_VERSION`。
+- `apps/shell-react/src/config/apollo.ts`：每个 remote 声明 `supportedShellProtocolVersions`。
+- `apps/shell-react/src/runtime-manifest.ts`：加载 manifest 时过滤不兼容 remote。
+- `packages/shared-types/src/index.ts`：`RuntimeRemoteManifestItem` 定义协议兼容字段。
 
 ### 分阶段落地步骤
 
-- MVP：支持精确匹配（`1.0`）。
+- MVP：支持精确匹配（例如 Shell 为 `"1"`，remote 声明 `["1"]`）。
 - 增强：支持 semver range 与灰度规则。
 
 ### 失败场景与降级策略

@@ -134,6 +134,70 @@ describe("loadRuntimeRemoteRoutes", () => {
     ]);
   });
 
+  it("skips remotes that do not support the current Shell protocol", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const registerRemoteEntries = vi.fn();
+
+    const routes = await loadRuntimeRemoteRoutes({
+      fallbackRoutes,
+      registerRemoteEntries,
+      runtimeEnv: {
+        manifest: {
+          remotes: [
+            {
+              basename: "/react",
+              entryBaseUrl: "http://localhost:3001/",
+              id: "react-dashboard",
+              path: "/react/*",
+              remoteName: "remote_react",
+              status: "active",
+              supportedShellProtocolVersions: ["1"],
+              title: "React Remote",
+            },
+            {
+              basename: "/legacy",
+              entryBaseUrl: "http://localhost:3010/",
+              id: "legacy",
+              path: "/legacy/*",
+              remoteName: "remote_legacy",
+              status: "active",
+              supportedShellProtocolVersions: ["0"],
+              title: "Legacy Remote",
+            },
+          ],
+        },
+        runtimeEnv: "local",
+      },
+    });
+
+    expect(registerRemoteEntries).toHaveBeenCalledWith([
+      {
+        entry: "http://localhost:3001/remoteEntry.js",
+        remoteName: "remote_react",
+      },
+    ]);
+    expect(routes).toEqual([
+      {
+        basename: "/react",
+        exposedModule: "./mount",
+        id: "react-dashboard",
+        path: "/react/*",
+        remoteName: "remote_react",
+        title: "React Remote",
+      },
+    ]);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Remote protocol is incompatible with Shell",
+      expect.objectContaining({
+        remoteName: "remote_legacy",
+        shellProtocolVersion: "1",
+        supportedShellProtocolVersions: ["0"],
+      }),
+    );
+  });
+
   it("falls back to static routes when the injected manifest is invalid", async () => {
     const consoleError = vi
       .spyOn(console, "error")

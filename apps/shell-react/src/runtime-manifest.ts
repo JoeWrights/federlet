@@ -6,6 +6,7 @@ import type {
   RuntimeRemoteManifestItem,
   RuntimeRemoteRouteConfig,
 } from "@federlet/shared-types";
+import { SHELL_REMOTE_PROTOCOL_VERSION } from "./config/constants";
 
 /**
  * 加载运行时 remote 路由的选项。
@@ -66,6 +67,11 @@ function isManifestRemote(value: unknown): value is RuntimeRemoteManifestItem {
     typeof value.basename === "string" &&
     (typeof value.entry === "string" ||
       typeof value.entryBaseUrl === "string") &&
+    (value.supportedShellProtocolVersions === undefined ||
+      (Array.isArray(value.supportedShellProtocolVersions) &&
+        value.supportedShellProtocolVersions.every(
+          (version) => typeof version === "string",
+        ))) &&
     (value.status === undefined ||
       value.status === "active" ||
       value.status === "disabled")
@@ -136,11 +142,40 @@ function toRemoteRoute(route: RuntimeRemoteRouteConfig): RemoteRouteConfig {
   };
 }
 
+function isRemoteCompatibleWithShell(remote: RuntimeRemoteManifestItem) {
+  return (
+    remote.supportedShellProtocolVersions === undefined ||
+    remote.supportedShellProtocolVersions.includes(SHELL_REMOTE_PROTOCOL_VERSION)
+  );
+}
+
+function reportIncompatibleRemote(remote: RuntimeRemoteManifestItem) {
+  console.error("Remote protocol is incompatible with Shell", {
+    remoteName: remote.remoteName,
+    shellProtocolVersion: SHELL_REMOTE_PROTOCOL_VERSION,
+    supportedShellProtocolVersions: remote.supportedShellProtocolVersions,
+  });
+}
+
+function getCompatibleManifestRemotes(manifest: RuntimeRemoteManifest) {
+  return manifest.remotes.filter((remote) => {
+    if (remote.status === "disabled") {
+      return false;
+    }
+
+    if (!isRemoteCompatibleWithShell(remote)) {
+      reportIncompatibleRemote(remote);
+      return false;
+    }
+
+    return true;
+  });
+}
+
 export function createRemoteRoutesFromManifest(
   manifest: RuntimeRemoteManifest,
 ): RemoteRouteConfig[] {
-  return manifest.remotes
-    .filter((remote) => remote.status !== "disabled")
+  return getCompatibleManifestRemotes(manifest)
     .map((remote) => toRuntimeRoute(remote))
     .map(toRemoteRoute);
 }
@@ -155,9 +190,9 @@ function registerManifestRoutes(
   manifest: RuntimeRemoteManifest,
   registerRemoteEntries: typeof registerRuntimeRemoteEntries,
 ) {
-  const runtimeRoutes = manifest.remotes
-    .filter((remote) => remote.status !== "disabled")
-    .map((remote) => toRuntimeRoute(remote));
+  const runtimeRoutes = getCompatibleManifestRemotes(manifest).map((remote) =>
+    toRuntimeRoute(remote),
+  );
 
   registerRemoteEntries(
     runtimeRoutes.map((route) => ({
