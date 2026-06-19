@@ -55,6 +55,47 @@ describe("createRemoteRouteElement", () => {
 });
 
 describe("App runtime routes", () => {
+  it("does not mount fallback remote routes before runtime registration finishes", async () => {
+    let resolveRoutes: (
+      routes: Awaited<ReturnType<typeof loadRuntimeRemoteRoutes>>,
+    ) => void = () => undefined;
+    mockedLoadRuntimeRemoteRoutes.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRoutes = resolve;
+        }),
+    );
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(
+        <MemoryRouter initialEntries={["/vue/"]}>
+          <App />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(document.body.textContent).toContain("Loading remote routes...");
+    expect(document.body.textContent).not.toContain("Boundary Vue Remote");
+
+    await act(async () => {
+      resolveRoutes([
+        {
+          basename: "/vue",
+          exposedModule: "./mount",
+          id: "vue-analytics",
+          path: "/vue/*",
+          remoteName: "remote_vue",
+          title: "Vue Remote",
+        },
+      ]);
+    });
+
+    expect(document.body.textContent).toContain("Boundary Vue Remote");
+  });
+
   it("renders remote navigation from the runtime manifest when it is available", async () => {
     mockedLoadRuntimeRemoteRoutes.mockResolvedValue([
       {

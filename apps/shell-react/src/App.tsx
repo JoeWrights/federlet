@@ -47,6 +47,7 @@ export function createRemoteRouteElement(route: RemoteRouteConfig) {
 export function App() {
   const [routes, setRoutes] = useState<RemoteRouteConfig[]>(remoteRoutes);
   const [routesReady, setRoutesReady] = useState(false);
+  const remoteRouteElements = routesReady ? routes : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +91,7 @@ export function App() {
 
       <Routes>
         <Route path="/" element={<HomePage routes={routes} />} />
-        {routes.map((route) => (
+        {remoteRouteElements.map((route) => (
           <Route
             key={route.id}
             path={route.path}
