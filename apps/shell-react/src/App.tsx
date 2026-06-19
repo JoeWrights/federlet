@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { createRemotePreloader, RemoteAppBoundary } from "@federlet/react-shell";
+import {
+  createEventBus,
+  validateFederletEventPayload,
+} from "@federlet/mf-runtime";
+import {
+  createRemotePreloader,
+  RemoteAppBoundary,
+} from "@federlet/react-shell";
 import type { RemoteRouteConfig } from "@federlet/shared-types";
+import type { MicroEventBus } from "@federlet/shared-types";
 import type { RemotePreloader } from "@federlet/react-shell";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
@@ -44,9 +52,11 @@ function HomePage({
 }
 
 function PreloadedRemoteRoute({
+  eventBus,
   preloadRoute,
   route,
 }: {
+  eventBus?: MicroEventBus;
   preloadRoute: (route: RemoteRouteConfig) => Promise<void>;
   route: RemoteRouteConfig;
 }) {
@@ -70,7 +80,14 @@ function PreloadedRemoteRoute({
     return <main className="home">Loading remote routes...</main>;
   }
 
-  return <RemoteAppBoundary route={route} />;
+  return (
+    <RemoteAppBoundary
+      route={route}
+      createMountContext={
+        eventBus ? createRemoteMountContextFactory(eventBus) : undefined
+      }
+    />
+  );
 }
 
 /**
@@ -81,10 +98,16 @@ function PreloadedRemoteRoute({
 export function createRemoteRouteElement(
   route: RemoteRouteConfig,
   preloadRoute?: (route: RemoteRouteConfig) => Promise<void>,
+  eventBus?: MicroEventBus,
 ) {
+  const createMountContext = eventBus
+    ? createRemoteMountContextFactory(eventBus)
+    : undefined;
+
   if (preloadRoute) {
     return (
       <PreloadedRemoteRoute
+        eventBus={eventBus}
         key={route.id}
         route={route}
         preloadRoute={preloadRoute}
@@ -92,7 +115,39 @@ export function createRemoteRouteElement(
     );
   }
 
-  return <RemoteAppBoundary key={route.id} route={route} />;
+  return (
+    <RemoteAppBoundary
+      key={route.id}
+      route={route}
+      createMountContext={createMountContext}
+    />
+  );
+}
+
+function createRemoteMountContextFactory(eventBus: MicroEventBus) {
+  return ({
+    container,
+    route,
+  }: {
+    container: HTMLElement;
+    route: RemoteRouteConfig;
+  }) => ({
+    basename: route.basename,
+    container,
+    eventBus,
+    props: {
+      mountedAt: new Date().toISOString(),
+    },
+  });
+}
+
+function createShellEventBus() {
+  return createEventBus({
+    validatePayload: validateFederletEventPayload,
+    onInvalidEvent(event) {
+      console.warn(`Rejected federlet event ${event.eventName}`, event);
+    },
+  });
 }
 
 /**
@@ -106,6 +161,7 @@ export function App() {
   const [remotePreloader] = useState<RemotePreloader>(() =>
     createRemotePreloader(),
   );
+  const [eventBus] = useState<MicroEventBus>(() => createShellEventBus());
   const remoteRouteElements = routesReady ? routes : [];
 
   const preloadRemoteRoute = useCallback(
@@ -118,6 +174,30 @@ export function App() {
     },
     [remotePreloader],
   );
+
+  useEffect(() => {
+    const unsubscribeMounted = eventBus.on(
+      "remote.lifecycle.mounted",
+      (payload, meta) => {
+        console.info("shell received remote.lifecycle.mounted", payload, meta);
+      },
+    );
+    const unsubscribeUnmounted = eventBus.on(
+      "remote.lifecycle.unmounted",
+      (payload, meta) => {
+        console.info(
+          "shell received remote.lifecycle.unmounted",
+          payload,
+          meta,
+        );
+      },
+    );
+
+    return () => {
+      unsubscribeMounted();
+      unsubscribeUnmounted();
+    };
+  }, [eventBus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,7 +261,11 @@ export function App() {
           <Route
             key={route.id}
             path={route.path}
-            element={createRemoteRouteElement(route, preloadRemoteRoute)}
+            element={createRemoteRouteElement(
+              route,
+              preloadRemoteRoute,
+              eventBus,
+            )}
           />
         ))}
         <Route

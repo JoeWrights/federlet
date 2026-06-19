@@ -191,6 +191,10 @@ describe("RemoteAppBoundary", () => {
 
   it("passes custom loader, load options, and mount context", async () => {
     const loader: RemoteModuleLoader = vi.fn();
+    const eventBus = {
+      emit: vi.fn(),
+      on: vi.fn(),
+    };
     const loadOptions = {
       retry: {
         maxAttempts: 1,
@@ -210,6 +214,7 @@ describe("RemoteAppBoundary", () => {
         return {
           basename: route.basename,
           container,
+          eventBus,
           props: {
             featureFlag: "custom",
           },
@@ -226,6 +231,7 @@ describe("RemoteAppBoundary", () => {
         container: expect.objectContaining({
           className: expect.stringContaining("remote-boundary__container"),
         }),
+        eventBus,
         props: {
           featureFlag: "custom",
         },

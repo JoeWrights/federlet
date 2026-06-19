@@ -58,6 +58,37 @@ describe("createRemoteRouteElement", () => {
 
     expect(element.key).toBe("vue-analytics");
   });
+
+  it("injects the shared event bus into the remote mount context", () => {
+    const eventBus = {
+      emit: vi.fn(),
+      on: vi.fn(),
+    };
+    const route = {
+      id: "vue-analytics",
+      path: "/vue/*",
+      title: "Vue Remote",
+      remoteName: "remote_vue",
+      exposedModule: "./mount",
+      basename: "/vue",
+    };
+    const element = createRemoteRouteElement(route, undefined, eventBus);
+    const container = document.createElement("div");
+
+    const context = element.props.createMountContext({
+      container,
+      route,
+    });
+
+    expect(context).toEqual({
+      basename: "/vue",
+      container,
+      eventBus,
+      props: {
+        mountedAt: expect.any(String),
+      },
+    });
+  });
 });
 
 describe("App runtime routes", () => {

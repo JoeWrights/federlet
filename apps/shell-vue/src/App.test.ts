@@ -7,6 +7,7 @@ import App from "./App.vue";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
 const remotePreloaderMocks = vi.hoisted(() => ({
+  mountContexts: [] as unknown[],
   preload: vi.fn(),
 }));
 
@@ -29,12 +30,25 @@ vi.mock("@federlet/vue-shell", async (importOriginal) => {
     })),
     RemoteAppBoundary: defineComponent({
       props: {
+        createMountContext: {
+          required: false,
+          type: Function,
+        },
         route: {
           required: true,
           type: Object,
         },
       },
       setup(props) {
+        if (props.createMountContext) {
+          remotePreloaderMocks.mountContexts.push(
+            props.createMountContext({
+              container: document.createElement("div"),
+              route: props.route,
+            }),
+          );
+        }
+
         return () =>
           h(
             "section",
@@ -89,6 +103,7 @@ afterEach(() => {
   host = null;
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
+  remotePreloaderMocks.mountContexts.length = 0;
   remotePreloaderMocks.preload.mockReset();
 });
 
@@ -205,5 +220,36 @@ describe("Vue Shell runtime routes", () => {
     await nextTick();
 
     expect(document.body.textContent).toContain("Boundary Orders");
+  });
+
+  it("injects one shared event bus into remote mount contexts", async () => {
+    const ordersRoute = {
+      basename: "/orders",
+      exposedModule: "./mount",
+      id: "orders",
+      path: "/orders/*",
+      remoteName: "remote_orders",
+      title: "Orders",
+    };
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([ordersRoute]);
+    remotePreloaderMocks.preload.mockResolvedValue(undefined);
+
+    await renderApp("/orders");
+    await flushPromises();
+    await nextTick();
+
+    expect(remotePreloaderMocks.mountContexts).toHaveLength(1);
+    expect(remotePreloaderMocks.mountContexts[0]).toEqual(
+      expect.objectContaining({
+        basename: "/orders",
+        eventBus: expect.objectContaining({
+          emit: expect.any(Function),
+          on: expect.any(Function),
+        }),
+        props: {
+          mountedAt: expect.any(String),
+        },
+      }),
+    );
   });
 });

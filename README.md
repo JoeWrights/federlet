@@ -71,6 +71,44 @@ export function mount(context: MicroAppContext): MicroAppInstance;
 
 Remote 必须返回 `unmount()`，Shell 在路由离开或组件卸载时调用它清理资源。
 
+### 跨应用事件总线
+
+Shell 通过 `createEventBus()` 创建单例事件总线，并通过
+`MicroAppContext.eventBus` 注入给 remote。事件名采用
+`domain.topic.action` 三段式命名，例如 `remote.lifecycle.mounted` 和
+`auth.session.updated`。
+
+内置事件在 `FederletEventMap` 中声明 payload 类型；运行时可通过
+`validateFederletEventPayload` 或自定义 `validatePayload` 校验 payload。remote
+在 `mount()` 中订阅事件时必须保存 `eventBus.on()` 返回的 unsubscribe，并在
+`unmount()` 中调用它，避免路由切换后残留监听器。
+
+```ts
+const unsubscribe = context.eventBus?.on(
+  "auth.session.updated",
+  (payload, meta) => {
+    console.info("auth changed", payload, meta.traceId);
+  },
+);
+
+context.eventBus?.emit(
+  "remote.lifecycle.mounted",
+  {
+    basename: context.basename,
+    remoteName: "remote_react",
+  },
+  {
+    source: "remote_react",
+  },
+);
+
+return {
+  unmount() {
+    unsubscribe?.();
+  },
+};
+```
+
 ## 常用命令
 
 ```bash

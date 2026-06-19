@@ -3,7 +3,13 @@
  *
  * Shell 侧只需要从这里消费 remote 加载、挂载和事件总线能力。
  */
-export { createEventBus } from "./event-bus";
+export {
+  createEventBus,
+  validateFederletEventPayload,
+  type CreateEventBusOptions,
+  type EventBusAuditEvent,
+  type EventBusInvalidEvent,
+} from "./event-bus";
 export {
   createCircuitBreakerStore,
   defaultRemoteLoader,

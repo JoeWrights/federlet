@@ -2,7 +2,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import type { MicroAppContext, MicroAppInstance } from "@federlet/shared-types";
 import { App } from "./App";
+import { createRemoteEventBusLifecycle } from "./remote-event-bus";
 import "./styles.css";
+
+const REMOTE_NAME = "remote_react";
 
 /**
  * 创建 DOM 逃逸探针。
@@ -34,21 +37,43 @@ function createDomEscapeProbe(remoteName: string) {
  */
 export function mount(context: MicroAppContext): MicroAppInstance {
   let root: Root | null = createRoot(context.container);
-  const domEscapeProbe = createDomEscapeProbe("remote_react");
+  const domEscapeProbe = createDomEscapeProbe(REMOTE_NAME);
+  const eventBusLifecycle = createRemoteEventBusLifecycle(context, REMOTE_NAME);
 
   // basename 让 remote 内部路由自然工作在 Shell 分配的子路径下。
-  root.render(
-    <BrowserRouter basename={context.basename}>
-      <App portalContainer={context.container} />
-    </BrowserRouter>,
-  );
+  try {
+    root.render(
+      <BrowserRouter basename={context.basename}>
+        <App portalContainer={context.container} />
+      </BrowserRouter>,
+    );
+  } catch (error) {
+    root.unmount();
+    root = null;
+    domEscapeProbe?.remove();
+    throw error;
+  }
+
+  try {
+    eventBusLifecycle.notifyMounted();
+  } catch (error) {
+    root.unmount();
+    root = null;
+    domEscapeProbe?.remove();
+    throw error;
+  }
 
   return {
     unmount() {
-      // Shell 切换路由时调用这里，确保 React root 和事件监听被释放。
-      root?.unmount();
-      root = null;
-      domEscapeProbe?.remove();
+      eventBusLifecycle.cleanup();
+      try {
+        eventBusLifecycle.notifyUnmounted();
+      } finally {
+        // Shell 切换路由时调用这里，确保 React root 和事件监听被释放。
+        root?.unmount();
+        root = null;
+        domEscapeProbe?.remove();
+      }
     },
   };
 }

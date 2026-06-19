@@ -5,8 +5,11 @@ import type {
   MicroAppInstance,
 } from "@federlet/shared-types";
 import App from "./App.vue";
+import { createRemoteEventBusLifecycle } from "./remote-event-bus";
 import { createVueRemoteRoutes } from "./routes";
 import "./styles.css";
+
+const REMOTE_NAME = "remote_vue";
 
 /**
  * 为 Vue remote 创建局部路由实例。
@@ -26,16 +29,36 @@ function createRemoteRouter(basename: string) {
 export function mount(context: MicroAppContext): MicroAppInstance {
   let app: VueApp<Element> | null = createApp(App);
   const router = createRemoteRouter(context.basename);
+  const eventBusLifecycle = createRemoteEventBusLifecycle(context, REMOTE_NAME);
 
   // remote 自己维护内部路由，Shell 只负责把入口路径分配给它。
   app.use(router);
-  app.mount(context.container);
+  try {
+    app.mount(context.container);
+  } catch (error) {
+    app.unmount();
+    app = null;
+    throw error;
+  }
+
+  try {
+    eventBusLifecycle.notifyMounted();
+  } catch (error) {
+    app.unmount();
+    app = null;
+    throw error;
+  }
 
   return {
     unmount() {
-      // Shell 路由离开时释放 Vue 应用实例。
-      app?.unmount();
-      app = null;
+      eventBusLifecycle.cleanup();
+      try {
+        eventBusLifecycle.notifyUnmounted();
+      } finally {
+        // Shell 路由离开时释放 Vue 应用实例。
+        app?.unmount();
+        app = null;
+      }
     },
   };
 }

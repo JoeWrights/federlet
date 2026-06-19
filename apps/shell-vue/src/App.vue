@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
+import {
+  createEventBus,
+  validateFederletEventPayload,
+} from "@federlet/mf-runtime";
 import { createRemotePreloader, RemoteAppBoundary } from "@federlet/vue-shell";
-import type { RemoteRouteConfig } from "@federlet/shared-types";
+import type { MicroEventBus, RemoteRouteConfig } from "@federlet/shared-types";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
@@ -11,7 +15,17 @@ const router = useRouter();
 const routes = ref<RemoteRouteConfig[]>(remoteRoutes);
 const routesReady = ref(false);
 const remotePreloader = createRemotePreloader();
+const eventBus = createShellEventBus();
 let removePreloadGuard: (() => void) | undefined;
+
+function createShellEventBus() {
+  return createEventBus({
+    validatePayload: validateFederletEventPayload,
+    onInvalidEvent(event) {
+      console.warn(`Rejected federlet event ${event.eventName}`, event);
+    },
+  });
+}
 
 function findRemoteRouteByPath(
   path: string,
@@ -39,6 +53,23 @@ async function preloadRemoteRoute(remoteRoute: RemoteRouteConfig) {
   } catch (error) {
     console.error(`Failed to preload remote ${remoteRoute.id}`, error);
   }
+}
+
+function createRemoteMountContext({
+  container,
+  route,
+}: {
+  container: HTMLElement;
+  route: RemoteRouteConfig;
+}) {
+  return {
+    basename: route.basename,
+    container,
+    eventBus: eventBus as MicroEventBus,
+    props: {
+      mountedAt: new Date().toISOString(),
+    },
+  };
 }
 
 onMounted(async () => {
@@ -124,6 +155,7 @@ onBeforeUnmount(() => {
       v-else-if="currentRemoteRoute"
       :key="currentRemoteRoute.id"
       :route="currentRemoteRoute"
+      :create-mount-context="createRemoteMountContext"
     />
   </div>
 </template>
