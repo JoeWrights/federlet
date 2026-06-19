@@ -3,17 +3,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { mountRemoteApp } from "@federlet/mf-runtime";
-import {
-  createRemoteScopeClass,
-  detectRuntimeStylePollution,
-} from "@federlet/style-isolation";
+import { mountRemoteApp, RemoteLoadErrorCode } from "@federlet/mf-runtime";
+import { createRemoteScopeClass } from "@federlet/style-isolation";
 import {
   createRemoteContainerClassName,
   RemoteAppBoundary,
   reportRemoteDomEscapes,
   scheduleRemoteUnmount,
-} from "./RemoteAppBoundary";
+} from "./index";
+import type { RemoteModuleLoader } from "@federlet/mf-runtime";
+import type { RemoteRouteConfig } from "@federlet/shared-types";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@federlet/mf-runtime", async (importOriginal) => {
   const actual =
@@ -26,7 +28,7 @@ vi.mock("@federlet/mf-runtime", async (importOriginal) => {
 });
 
 const mockedMountRemoteApp = vi.mocked(mountRemoteApp);
-const route = {
+const route: RemoteRouteConfig = {
   basename: "/react",
   exposedModule: "./mount",
   id: "react-dashboard",
@@ -39,6 +41,9 @@ describe("createRemoteContainerClassName", () => {
   it("adds a stable style isolation scope class for the remote container", () => {
     expect(createRemoteContainerClassName("remote_react")).toBe(
       "remote-boundary__container federlet-scope-remote-react",
+    );
+    expect(createRemoteContainerClassName("remote_react")).toContain(
+      createRemoteScopeClass("remote_react"),
     );
   });
 });
@@ -59,55 +64,6 @@ describe("scheduleRemoteUnmount", () => {
     vi.runOnlyPendingTimers();
 
     expect(unmount).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("detectRuntimeStylePollution", () => {
-  afterEach(() => {
-    document.head.innerHTML = "";
-    document.body.innerHTML = "";
-  });
-
-  it("reports dynamic style tags that contain unscoped selectors", () => {
-    const style = document.createElement("style");
-    style.textContent = `
-.leaked-toast {
-  color: red;
-}
-`;
-    document.head.append(style);
-
-    const issues = detectRuntimeStylePollution({
-      root: document,
-      scopeClass: createRemoteScopeClass("remote_react"),
-    });
-
-    expect(issues).toEqual([
-      expect.objectContaining({
-        severity: "error",
-        selector: ".leaked-toast",
-        reason: "unscoped-selector",
-      }),
-    ]);
-  });
-
-  it("allows dynamic style tags that stay scoped to the remote container", () => {
-    const style = document.createElement("style");
-    style.dataset.federletRemote = "remote_react";
-    style.textContent = `
-.federlet-scope-remote-react .remote-toast {
-  color: blue;
-}
-`;
-    document.head.append(style);
-
-    expect(
-      detectRuntimeStylePollution({
-        root: document,
-        remoteName: "remote_react",
-        scopeClass: createRemoteScopeClass("remote_react"),
-      }),
-    ).toEqual([]);
   });
 });
 
@@ -135,7 +91,9 @@ describe("reportRemoteDomEscapes", () => {
     ).not.toThrow();
 
     expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining("Remote remote_react created DOM outside its container during mount"),
+      expect.stringContaining(
+        "Remote remote_react created DOM outside its container during mount",
+      ),
       expect.objectContaining({
         node,
         phase: "mount",
@@ -146,21 +104,32 @@ describe("reportRemoteDomEscapes", () => {
   });
 });
 
-describe("RemoteAppBoundary DOM escape diagnostics", () => {
+describe("RemoteAppBoundary", () => {
   let root: Root | null = null;
 
   afterEach(() => {
-    root?.unmount();
+    act(() => {
+      root?.unmount();
+    });
     root = null;
     document.body.innerHTML = "";
     mockedMountRemoteApp.mockReset();
     vi.restoreAllMocks();
   });
 
-  it("reports remote DOM escapes without blocking the remote render", async () => {
+  async function renderRemoteBoundary(
+    props: Partial<Parameters<typeof RemoteAppBoundary>[0]> = {},
+  ) {
     const host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
+
+    await act(async () => {
+      root?.render(<RemoteAppBoundary route={route} {...props} />);
+    });
+  }
+
+  it("reports remote DOM escapes without blocking the remote render", async () => {
     const leakedNode = document.createElement("div");
     leakedNode.className = "remote-toast";
     const consoleError = vi
@@ -178,20 +147,7 @@ describe("RemoteAppBoundary DOM escape diagnostics", () => {
       };
     });
 
-    await act(async () => {
-      root?.render(
-        <RemoteAppBoundary
-          route={{
-            basename: "/react",
-            exposedModule: "./mount",
-            id: "react-dashboard",
-            path: "/react/*",
-            remoteName: "remote_react",
-            title: "React Remote",
-          }}
-        />,
-      );
-    });
+    await renderRemoteBoundary();
 
     expect(document.body.contains(leakedNode)).toBe(true);
     expect(document.querySelector(".remote-boundary__header span")?.textContent)
@@ -208,33 +164,50 @@ describe("RemoteAppBoundary DOM escape diagnostics", () => {
       }),
     );
   });
-});
 
-describe("RemoteAppBoundary remote resilience UI", () => {
-  let root: Root | null = null;
+  it("passes custom loader, load options, and mount context", async () => {
+    const loader: RemoteModuleLoader = vi.fn();
+    const loadOptions = {
+      retry: {
+        maxAttempts: 1,
+      },
+      timeoutMs: 1000,
+    };
+    mockedMountRemoteApp.mockResolvedValue({ unmount: vi.fn() });
 
-  afterEach(() => {
-    root?.unmount();
-    root = null;
-    document.body.innerHTML = "";
-    mockedMountRemoteApp.mockReset();
-    vi.restoreAllMocks();
-  });
-
-  async function renderRemoteBoundary() {
-    const host = document.createElement("div");
-    document.body.append(host);
-    root = createRoot(host);
-
-    await act(async () => {
-      root?.render(<RemoteAppBoundary route={route} />);
+    await renderRemoteBoundary({
+      createMountContext({ container, route }) {
+        return {
+          basename: route.basename,
+          container,
+          props: {
+            featureFlag: "custom",
+          },
+        };
+      },
+      loader,
+      loadOptions,
     });
-  }
+
+    expect(mockedMountRemoteApp).toHaveBeenCalledWith(
+      route,
+      expect.objectContaining({
+        basename: "/react",
+        props: {
+          featureFlag: "custom",
+        },
+      }),
+      loader,
+      expect.objectContaining({
+        timeoutMs: 1000,
+      }),
+    );
+  });
 
   it("shows a timeout-specific error message and retry button", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     mockedMountRemoteApp.mockRejectedValue({
-      code: "remote-load-timeout",
+      code: RemoteLoadErrorCode.Timeout,
     });
 
     await renderRemoteBoundary();
@@ -258,7 +231,7 @@ describe("RemoteAppBoundary remote resilience UI", () => {
   it("shows a retry-exhausted message for load failures", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     mockedMountRemoteApp.mockRejectedValue({
-      code: "remote-load-failed",
+      code: RemoteLoadErrorCode.LoadFailed,
     });
 
     await renderRemoteBoundary();
@@ -272,7 +245,7 @@ describe("RemoteAppBoundary remote resilience UI", () => {
   it("shows a degraded message when the remote circuit is open", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     mockedMountRemoteApp.mockRejectedValue({
-      code: "remote-circuit-open",
+      code: RemoteLoadErrorCode.CircuitOpen,
     });
 
     await renderRemoteBoundary();

@@ -16,7 +16,7 @@ vi.mock("./runtime-manifest", async (importOriginal) => {
   };
 });
 
-vi.mock("./RemoteAppBoundary", () => ({
+vi.mock("@federlet/react-shell", () => ({
   RemoteAppBoundary: ({
     route,
   }: {

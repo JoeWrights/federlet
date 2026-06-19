@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { RemoteAppBoundary } from "@federlet/react-shell";
 import type { RemoteRouteConfig } from "@federlet/shared-types";
-import { RemoteAppBoundary } from "./RemoteAppBoundary";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 

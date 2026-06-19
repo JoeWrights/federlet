@@ -5,6 +5,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
@@ -21,8 +22,10 @@
       "@federlet/rsbuild-config": ["packages/rsbuild-config/src/index.ts"],
       "@federlet/vite-config": ["packages/vite-config/src/index.ts"],
       "@federlet/webpack-config": ["packages/webpack-config/src/index.ts"],
+      "@federlet/react-shell": ["packages/react-shell/src/index.tsx"],
       "@federlet/shared-ui": ["packages/shared-ui/src/index.ts"],
-      "@federlet/style-isolation": ["packages/style-isolation/src/index.ts"]
+      "@federlet/style-isolation": ["packages/style-isolation/src/index.ts"],
+      "@federlet/vue-shell": ["packages/vue-shell/src/index.ts"]
     }
   }
 }
