@@ -3,7 +3,6 @@ import type {
   RemoteRouteConfig,
 } from "@federlet/shared-types";
 import { DEFAULT_APOLLO_RUNTIME_CONFIG } from "./config/apollo";
-import { DEFAULT_RUNTIME_ENV } from "./config/constants";
 import { createRemoteRoutesFromManifest } from "./runtime-manifest";
 
 /**
@@ -18,10 +17,7 @@ export function createFallbackRemoteRoutes(
     return [];
   }
 
-  return createRemoteRoutesFromManifest(
-    runtimeConfig.manifest,
-    runtimeConfig.remoteVersion ?? runtimeConfig.manifestVersion ?? DEFAULT_RUNTIME_ENV,
-  );
+  return createRemoteRoutesFromManifest(runtimeConfig.manifest);
 }
 
 /**

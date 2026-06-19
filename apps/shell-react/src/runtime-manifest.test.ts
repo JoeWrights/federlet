@@ -26,8 +26,6 @@ describe("loadRuntimeRemoteRoutes", () => {
       registerRemoteEntries,
       runtimeEnv: {
         manifest: {
-          generatedAt: "local",
-          manifestVersion: "local",
           remotes: [
             {
               basename: "/react",
@@ -58,22 +56,21 @@ describe("loadRuntimeRemoteRoutes", () => {
             },
           ],
         },
-        remoteVersion: "local",
         runtimeEnv: "local",
       },
     });
 
     expect(registerRemoteEntries).toHaveBeenCalledWith([
       {
-        entry: "http://localhost:3001/remoteEntry.js?v=local",
+        entry: "http://localhost:3001/remoteEntry.js",
         remoteName: "remote_react",
       },
       {
-        entry: "http://localhost:3002/remoteEntry.js?v=local",
+        entry: "http://localhost:3002/remoteEntry.js",
         remoteName: "remote_vue",
       },
       {
-        entry: "http://localhost:3003/remoteEntry.js?v=local",
+        entry: "http://localhost:3003/remoteEntry.js",
         remoteName: "remote_umi_react",
       },
     ]);
@@ -113,8 +110,6 @@ describe("loadRuntimeRemoteRoutes", () => {
       registerRemoteEntries,
       runtimeEnv: {
         manifest: {
-          generatedAt: "local",
-          manifestVersion: "local",
           remotes: [
             {
               basename: "/react",
@@ -127,14 +122,13 @@ describe("loadRuntimeRemoteRoutes", () => {
             },
           ],
         },
-        remoteVersion: "local",
         runtimeEnv: "local",
       },
     });
 
     expect(registerRemoteEntries).toHaveBeenCalledWith([
       {
-        entry: "http://localhost:3001/remoteEntry.js?v=local",
+        entry: "http://localhost:3001/remoteEntry.js",
         remoteName: "remote_react",
       },
     ]);
@@ -150,7 +144,7 @@ describe("loadRuntimeRemoteRoutes", () => {
       fallbackRoutes,
       registerRemoteEntries,
       runtimeEnv: {
-        manifest: { manifestVersion: "1.0.0" },
+        manifest: {},
         runtimeEnv: "test",
       } as never,
     });

@@ -12,7 +12,7 @@ describe("registerRuntimeRemoteEntries", () => {
   it("registers dynamic remoteEntry URLs with Module Federation runtime", () => {
     registerRuntimeRemoteEntries([
       {
-        entry: "https://cdn.example.com/orders/remoteEntry.js?v=20260619",
+        entry: "https://cdn.example.com/orders/remoteEntry.js",
         remoteName: "remote_orders",
       },
     ]);
@@ -20,7 +20,7 @@ describe("registerRuntimeRemoteEntries", () => {
     expect(mockedRegisterRemotes).toHaveBeenCalledWith(
       [
         {
-          entry: "https://cdn.example.com/orders/remoteEntry.js?v=20260619",
+          entry: "https://cdn.example.com/orders/remoteEntry.js",
           name: "remote_orders",
         },
       ],

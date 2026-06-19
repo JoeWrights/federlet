@@ -17,8 +17,6 @@ describe("runtime environment config", () => {
   it("creates local runtime environment from Apollo config defaults", () => {
     expect(createLocalRuntimeEnvironment()).toEqual({
       manifest: {
-        generatedAt: "local",
-        manifestVersion: "local",
         remotes: [
           {
             basename: "/react",
@@ -49,8 +47,6 @@ describe("runtime environment config", () => {
           },
         ],
       },
-      manifestVersion: "local",
-      remoteVersion: "local",
       runtimeEnv: "local",
     });
   });
@@ -67,12 +63,8 @@ describe("runtime environment config", () => {
     } = {
       __FEDERLET_ENV__: {
         manifest: {
-          generatedAt: "2026-06-20T00:00:00.000Z",
-          manifestVersion: "apollo-prod-42",
           remotes: [],
         },
-        manifestVersion: "apollo-prod-42",
-        remoteVersion: "20260620.1",
         runtimeEnv: "prod",
       },
     };
@@ -81,12 +73,8 @@ describe("runtime environment config", () => {
 
     expect(target.__FEDERLET_ENV__).toEqual({
       manifest: {
-        generatedAt: "2026-06-20T00:00:00.000Z",
-        manifestVersion: "apollo-prod-42",
         remotes: [],
       },
-      manifestVersion: "apollo-prod-42",
-      remoteVersion: "20260620.1",
       runtimeEnv: "prod",
     });
   });

@@ -87,8 +87,6 @@ function isRuntimeRemoteManifest(value: unknown): value is RuntimeRemoteManifest
   }
 
   return (
-    typeof value.manifestVersion === "string" &&
-    typeof value.generatedAt === "string" &&
     Array.isArray(value.remotes) &&
     value.remotes.every(isManifestRemote)
   );
@@ -97,16 +95,12 @@ function isRuntimeRemoteManifest(value: unknown): value is RuntimeRemoteManifest
 /**
  * 将 manifest 中的 remote 转换为 runtime 路由配置。
  * @param remote - manifest 中的 remote。
- * @param remoteVersion - remote 版本。
  * @returns runtime 路由配置。
  */
-function toRuntimeRoute(
-  remote: RuntimeRemoteManifestItem,
-  remoteVersion: string,
-): RuntimeRemoteRouteConfig {
+function toRuntimeRoute(remote: RuntimeRemoteManifestItem): RuntimeRemoteRouteConfig {
   return {
     basename: remote.basename,
-    entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl, remoteVersion),
+    entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl),
     exposedModule: remote.exposedModule ?? DEFAULT_REMOTE_EXPOSED_MODULE,
     id: remote.id,
     path: remote.path,
@@ -118,10 +112,9 @@ function toRuntimeRoute(
 /**
  * 创建 remote entry 的 URL。
  * @param entryBaseUrl - remote entry 的 base URL。
- * @param remoteVersion - remote 版本。
  * @returns remote entry 的 URL。
  */
-function createRemoteEntryUrl(entryBaseUrl: string | undefined, remoteVersion: string) {
+function createRemoteEntryUrl(entryBaseUrl: string | undefined) {
   if (!entryBaseUrl) {
     throw new Error("Remote manifest item is missing entryBaseUrl.");
   }
@@ -130,7 +123,7 @@ function createRemoteEntryUrl(entryBaseUrl: string | undefined, remoteVersion: s
     ? entryBaseUrl
     : `${entryBaseUrl}/`;
 
-  return `${normalizedBaseUrl}remoteEntry.js?v=${encodeURIComponent(remoteVersion)}`;
+  return `${normalizedBaseUrl}remoteEntry.js`;
 }
 
 /**
@@ -151,11 +144,10 @@ function toRemoteRoute(route: RuntimeRemoteRouteConfig): RemoteRouteConfig {
 
 export function createRemoteRoutesFromManifest(
   manifest: RuntimeRemoteManifest,
-  remoteVersion: string,
 ): RemoteRouteConfig[] {
   return manifest.remotes
     .filter((remote) => remote.status !== "disabled")
-    .map((remote) => toRuntimeRoute(remote, remoteVersion))
+    .map((remote) => toRuntimeRoute(remote))
     .map(toRemoteRoute);
 }
 
@@ -163,17 +155,15 @@ export function createRemoteRoutesFromManifest(
  * 注册 manifest 中的 remote 路由。
  * @param manifest - manifest。
  * @param registerRemoteEntries - 注册远程入口的函数。
- * @param remoteVersion - remote 版本。
  * @returns runtime 路由配置。
  */
 function registerManifestRoutes(
   manifest: RuntimeRemoteManifest,
   registerRemoteEntries: typeof registerRuntimeRemoteEntries,
-  remoteVersion: string,
 ) {
   const runtimeRoutes = manifest.remotes
     .filter((remote) => remote.status !== "disabled")
-    .map((remote) => toRuntimeRoute(remote, remoteVersion));
+    .map((remote) => toRuntimeRoute(remote));
 
   registerRemoteEntries(
     runtimeRoutes.map((route) => ({
@@ -207,7 +197,6 @@ export async function loadRuntimeRemoteRoutes({
     return registerManifestRoutes(
       runtimeEnv.manifest,
       registerRemoteEntries,
-      runtimeEnv.remoteVersion ?? runtimeEnv.manifest.manifestVersion,
     );
   }
 

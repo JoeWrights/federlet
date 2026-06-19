@@ -73,13 +73,11 @@ flowchart TD
 ### 方案设计
 
 - 明确 manifest 来源为 **Apollo 配置中心**，并采用“流水线打包注入 Shell 全局环境变量”的交付模式：
-  - Apollo 维护环境级配置项（如 `federlet.manifest.url`、`federlet.manifest.version`）。
-  - CI/CD 在构建阶段读取 Apollo 配置，注入到 Shell 全局环境变量（如 `window.__FEDERLET_ENV__` 或构建时 `process.env`）。
-  - Shell 启动时优先读取已注入变量中的 `manifestUrl`，再发起 manifest 拉取。
+  - Apollo 维护当前集群的 remote manifest JSON。
+  - CI/CD 在构建阶段读取 Apollo 配置，并注入到 Shell 全局环境变量（如 `window.__FEDERLET_ENV__.manifest`）。
+  - Shell 启动时直接读取已注入的 manifest，不再额外请求 manifest URL。
 - 定义 manifest 契约（建议 JSON）：
-  - `manifestVersion`
-  - `generatedAt`
-  - `remotes[]`（`id`、`remoteName`、`entry`、`exposedModule`、`basename`、`status`、`meta`）
+  - `remotes[]`（`id`、`remoteName`、`entryBaseUrl`、`basename`、`status`、`meta`）
 - Shell 启动阶段新增 `fetchRuntimeManifest()`，并做 schema 校验。
 - 校验通过后转换为内部 `RuntimeRemoteDefinition`，再交给 registry。
 
@@ -425,10 +423,10 @@ flowchart TD
     - 推荐 `cache-control: no-cache, must-revalidate`（默认方案，兼顾实时性与开销）。
     - 对强实时场景可用 `cache-control: no-store`（实时性最高，但回源成本更高）。
   - `chunk.[contenthash].js`: `cache-control: max-age=31536000, immutable`
-- `remoteEntry` 地址增加版本参数（关键）：
-  - 形态示例：`https://cdn.example.com/remoteEntry.js?v=<buildId>`。
-  - 版本号来源：Apollo 配置 -> CI/CD 打包注入 Shell 全局环境变量（如 `window.__FEDERLET_ENV__.remoteVersion`）。
-  - Shell 运行时拼接 `v` 参数，确保浏览器和 CDN 在新版本发布后命中新 URL。
+- `remoteEntry` 使用固定 URL，不追加版本查询参数：
+  - 形态示例：`https://cdn.example.com/remoteEntry.js`。
+  - 实时性由 remote 应用的 NGINX/CDN 响应头保证：`cache-control: no-cache, must-revalidate`。
+  - Shell/Apollo 只维护 `entryBaseUrl`，不随 remote 每次发布更新版本号。
 - manifest 增加 `cachePolicy` 声明（可选），便于观测和对账。
 - 配合 CDN purge 规则，仅回收 `remoteEntry.js` 与 manifest。
 
@@ -439,15 +437,15 @@ flowchart TD
 ### 分阶段落地步骤
 
 - MVP：统一 HTTP 头策略（`remoteEntry` 短缓存/协商缓存，chunk 长缓存）。
-- MVP：接入 Apollo 版本号注入，并在 `remoteEntry` URL 上追加 `?v=<version>`。
+- MVP：各 remote 应用维护 NGINX `location = /remoteEntry.js` 规则，设置 `no-cache, must-revalidate`。
 - MVP：发布完成后执行 CDN 失效（至少 `remoteEntry.js` + manifest）。
 - 增强：接入 SW 或边缘缓存分层策略。
 
 ### 失败场景与降级策略
 
 - 缓存穿透或旧入口：manifest 快速刷新 + 入口短缓存兜底。
-- 版本参数未更新（发布漏注入）：阻断上线或触发发布后校验告警。
-- CDN 失效延迟：通过 `?v=<buildId>` 的新 URL 强制绕过旧缓存。
+- NGINX/CDN 误把 `remoteEntry.js` 长缓存：发布健康检查必须验证响应头。
+- CDN 失效延迟：依赖 `no-cache, must-revalidate` 协商缓存，并在必要时执行 CDN purge。
 
 ### 验收标准
 
@@ -459,8 +457,8 @@ flowchart TD
 
 - 集成：验证响应头符合策略。
 - E2E：发布后版本切换与回源行为验证。
-- E2E：同一 `remoteEntry.js` 文件名下，修改 `v` 参数后返回新版本内容。
-- 发布校验：检查 Apollo 注入版本、manifest 版本、`remoteEntry?v=` 三者一致。
+- E2E：同一 `remoteEntry.js` 文件名下，发布后协商缓存能返回新版本内容。
+- 发布校验：检查 `remoteEntry.js` 响应头为 `no-cache, must-revalidate`。
 
 ---
 

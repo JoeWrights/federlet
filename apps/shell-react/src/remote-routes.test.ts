@@ -6,8 +6,6 @@ describe("remoteRoutes", () => {
     expect(
       createFallbackRemoteRoutes({
         manifest: {
-          generatedAt: "test",
-          manifestVersion: "test",
           remotes: [
             {
               basename: "/orders",
@@ -20,7 +18,6 @@ describe("remoteRoutes", () => {
             },
           ],
         },
-        remoteVersion: "test",
         runtimeEnv: "test",
       }),
     ).toEqual([

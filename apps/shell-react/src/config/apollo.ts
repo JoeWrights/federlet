@@ -9,8 +9,6 @@ import { DEFAULT_RUNTIME_ENV } from "./constants";
  */
 export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
   manifest: {
-    generatedAt: "local",
-    manifestVersion: DEFAULT_RUNTIME_ENV,
     remotes: [
       {
         basename: "/react",
@@ -41,7 +39,5 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
       },
     ],
   },
-  manifestVersion: DEFAULT_RUNTIME_ENV,
-  remoteVersion: DEFAULT_RUNTIME_ENV,
   runtimeEnv: DEFAULT_RUNTIME_ENV,
 };

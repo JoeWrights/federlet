@@ -83,11 +83,6 @@ export interface FederletRuntimeEnvironment {
   /** Apollo 直接注入的 remote manifest。 */
   manifest?: RuntimeRemoteManifest;
 
-  /** Apollo 中当前配置版本，便于日志和发布校验。 */
-  manifestVersion?: string;
-
-  /** remoteEntry 固定文件名时使用的版本参数。 */
-  remoteVersion?: string;
 }
 
 /**
@@ -115,8 +110,6 @@ export interface RuntimeRemoteManifestItem
  * Shell 启动时读取的 remote manifest。
  */
 export interface RuntimeRemoteManifest {
-  manifestVersion: string;
-  generatedAt: string;
   remotes: RuntimeRemoteManifestItem[];
 }
 
