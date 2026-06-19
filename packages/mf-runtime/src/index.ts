@@ -5,10 +5,19 @@
  */
 export { createEventBus } from "./event-bus";
 export {
+  createCircuitBreakerStore,
   defaultRemoteLoader,
   mountRemoteApp,
   normalizeExposedModule,
+  RemoteLoadError,
+  RemoteLoadErrorCode,
+  type RemoteCircuitBreakerOptions,
+  type RemoteCircuitBreakerStore,
+  type RemoteCircuitSnapshot,
+  type RemoteCircuitStatus,
+  type RemoteLoadOptions,
   type RemoteModuleLoader,
+  type RemoteRetryOptions,
 } from "./loader";
 export {
   registerRuntimeRemoteEntries,

@@ -261,6 +261,8 @@ flowchart TD
 
 ## 5) Remote 加载超时控制
 
+详细设计见 `docs/remote-load-resilience.md`。
+
 ### 目标与当前问题
 
 - 目标：为 remote 加载设置上限，避免无限等待导致页面卡死。
@@ -301,6 +303,8 @@ flowchart TD
 ---
 
 ## 6) Remote 加载失败重试策略
+
+详细设计见 `docs/remote-load-resilience.md`。
 
 ### 目标与当前问题
 
@@ -343,6 +347,8 @@ flowchart TD
 ---
 
 ## 7) Remote 熔断与降级策略
+
+详细设计见 `docs/remote-load-resilience.md`。
 
 ### 目标与当前问题
 

@@ -58,9 +58,9 @@
 - [ ] 环境化 remote 地址（部分完成）：当前由 Apollo 集群隔离环境配置，Shell 本地维护默认 Apollo 配置注入。
 - [x] remote 版本治理：声明 Shell 与 remote 的协议版本兼容关系。
 - [ ] remote 注册中心（部分完成）：Apollo manifest 已集中维护 remote 名称、入口、路由和状态，尚未实现运行时 registry 状态管理。
-- [ ] remote 加载超时控制。
-- [ ] remote 加载失败重试策略。
-- [ ] remote 熔断和降级策略。
+- [x] remote 加载超时控制。
+- [x] remote 加载失败重试策略。
+- [x] remote 熔断和降级策略。
 - [ ] remote 预加载：进入页面前提前加载 remoteEntry 或关键 chunk。
 - [x] remote 资源缓存策略：remoteEntry 短缓存，chunk 长缓存。
 - [ ] 跨应用事件总线规范化（部分完成）：已有基础 emit/on/unsubscribe，尚未定义事件命名、payload 类型和订阅生命周期规范。

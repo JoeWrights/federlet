@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { mountRemoteApp } from "@federlet/mf-runtime";
+import { mountRemoteApp, RemoteLoadErrorCode } from "@federlet/mf-runtime";
+import type { RemoteLoadOptions } from "@federlet/mf-runtime";
 import {
   captureRemoteDomSnapshot,
   createRemoteContainerClassName as createScopedRemoteContainerClassName,
@@ -18,10 +19,75 @@ interface RemoteAppBoundaryProps {
   route: RemoteRouteConfig;
 }
 
+/**
+ * 默认远程应用加载选项。
+ */
+const DEFAULT_REMOTE_LOAD_OPTIONS: RemoteLoadOptions = {
+  circuitBreaker: {
+    cooldownMs: 30_000,
+    failureThreshold: 3,
+  },
+  retry: {
+    backoffBaseMs: 300,
+    maxAttempts: 3,
+  },
+  timeoutMs: 8000,
+};
+
+/**
+ * 是否报告远程应用 DOM 逃逸。
+ * @returns 是否报告远程应用 DOM 逃逸。
+ */
 function shouldReportRemoteDomEscapes() {
   return process.env.NODE_ENV !== "production";
 }
 
+/**
+ * 获取远程应用加载错误代码。
+ * @param error - 错误。
+ * @returns 错误代码。
+ */
+function getRemoteLoadErrorCode(
+  error: unknown,
+): RemoteLoadErrorCode | undefined {
+  if (
+    typeof error !== "object" ||
+    error === null ||
+    !("code" in error) ||
+    typeof error.code !== "string"
+  ) {
+    return undefined;
+  }
+
+  return error.code as RemoteLoadErrorCode;
+}
+
+/**
+ * 创建远程应用错误消息。
+ * @param error - 错误。
+ * @returns 错误消息。
+ */
+function createRemoteErrorMessage(error: unknown) {
+  switch (getRemoteLoadErrorCode(error)) {
+    case RemoteLoadErrorCode.Timeout:
+      return "Remote app loading timed out.";
+    case RemoteLoadErrorCode.LoadFailed:
+      return "Remote app failed to load after retries.";
+    case RemoteLoadErrorCode.CircuitOpen:
+      return "Remote app is temporarily degraded.";
+    case RemoteLoadErrorCode.ProtocolError:
+      return "Remote app contract is incompatible.";
+    case RemoteLoadErrorCode.MountFailed:
+      return "Remote app failed during mount.";
+    default:
+      return "Remote app is unavailable.";
+  }
+}
+
+/**
+ * 报告远程应用 DOM 逃逸。
+ * @param issues - 逃逸问题。
+ */
 export function reportRemoteDomEscapes(issues: RemoteDomEscapeIssue[]) {
   if (!shouldReportRemoteDomEscapes()) {
     return;
@@ -35,6 +101,11 @@ export function reportRemoteDomEscapes(issues: RemoteDomEscapeIssue[]) {
   }
 }
 
+/**
+ * 调度远程应用卸载。
+ * @param instance - 远程应用实例。
+ * @param afterUnmount - 卸载后回调。
+ */
 export function scheduleRemoteUnmount(
   instance: MicroAppInstance | null,
   afterUnmount?: () => void,
@@ -75,6 +146,9 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
+  const [errorMessage, setErrorMessage] = useState(
+    "Remote app is unavailable.",
+  );
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -86,6 +160,7 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
       }
 
       setStatus("loading");
+      setErrorMessage("Remote app is unavailable.");
 
       try {
         const domSnapshot = captureRemoteDomSnapshot({
@@ -93,13 +168,18 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
         });
         domSnapshotRef.current = domSnapshot;
         // Shell 只注入协议上下文，不直接依赖 remote 内部框架实现。
-        const instance = await mountRemoteApp(route, {
-          basename: route.basename,
-          container: containerRef.current,
-          props: {
-            mountedAt: new Date().toISOString(),
+        const instance = await mountRemoteApp(
+          route,
+          {
+            basename: route.basename,
+            container: containerRef.current,
+            props: {
+              mountedAt: new Date().toISOString(),
+            },
           },
-        });
+          undefined,
+          DEFAULT_REMOTE_LOAD_OPTIONS,
+        );
 
         // 如果加载过程中边界已经卸载，立即释放刚创建的 remote 实例。
         if (cancelled) {
@@ -121,6 +201,7 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
         console.error(`Failed to mount remote ${route.id}`, error);
 
         if (!cancelled) {
+          setErrorMessage(createRemoteErrorMessage(error));
           setStatus("error");
         }
       }
@@ -166,7 +247,7 @@ export function RemoteAppBoundary({ route }: RemoteAppBoundaryProps) {
 
       {status === "error" ? (
         <div className="remote-boundary__error" role="alert">
-          <p>Remote app is unavailable.</p>
+          <p>{errorMessage}</p>
           <button type="button" onClick={() => setRetryKey((key) => key + 1)}>
             Retry
           </button>

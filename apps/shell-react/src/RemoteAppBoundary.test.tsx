@@ -15,11 +15,25 @@ import {
   scheduleRemoteUnmount,
 } from "./RemoteAppBoundary";
 
-vi.mock("@federlet/mf-runtime", () => ({
-  mountRemoteApp: vi.fn(),
-}));
+vi.mock("@federlet/mf-runtime", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@federlet/mf-runtime")>();
+
+  return {
+    ...actual,
+    mountRemoteApp: vi.fn(),
+  };
+});
 
 const mockedMountRemoteApp = vi.mocked(mountRemoteApp);
+const route = {
+  basename: "/react",
+  exposedModule: "./mount",
+  id: "react-dashboard",
+  path: "/react/*",
+  remoteName: "remote_react",
+  title: "React Remote",
+};
 
 describe("createRemoteContainerClassName", () => {
   it("adds a stable style isolation scope class for the remote container", () => {
@@ -193,5 +207,79 @@ describe("RemoteAppBoundary DOM escape diagnostics", () => {
         remoteName: "remote_react",
       }),
     );
+  });
+});
+
+describe("RemoteAppBoundary remote resilience UI", () => {
+  let root: Root | null = null;
+
+  afterEach(() => {
+    root?.unmount();
+    root = null;
+    document.body.innerHTML = "";
+    mockedMountRemoteApp.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  async function renderRemoteBoundary() {
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(<RemoteAppBoundary route={route} />);
+    });
+  }
+
+  it("shows a timeout-specific error message and retry button", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockedMountRemoteApp.mockRejectedValue({
+      code: "remote-load-timeout",
+    });
+
+    await renderRemoteBoundary();
+
+    expect(document.querySelector("[role='alert']")?.textContent).toContain(
+      "Remote app loading timed out.",
+    );
+    expect(document.querySelector("button")?.textContent).toBe("Retry");
+    expect(mockedMountRemoteApp).toHaveBeenCalledWith(
+      route,
+      expect.objectContaining({
+        basename: "/react",
+      }),
+      undefined,
+      expect.objectContaining({
+        timeoutMs: 8000,
+      }),
+    );
+  });
+
+  it("shows a retry-exhausted message for load failures", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockedMountRemoteApp.mockRejectedValue({
+      code: "remote-load-failed",
+    });
+
+    await renderRemoteBoundary();
+
+    expect(document.querySelector("[role='alert']")?.textContent).toContain(
+      "Remote app failed to load after retries.",
+    );
+    expect(document.querySelector("button")?.textContent).toBe("Retry");
+  });
+
+  it("shows a degraded message when the remote circuit is open", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockedMountRemoteApp.mockRejectedValue({
+      code: "remote-circuit-open",
+    });
+
+    await renderRemoteBoundary();
+
+    expect(document.querySelector("[role='alert']")?.textContent).toContain(
+      "Remote app is temporarily degraded.",
+    );
+    expect(document.querySelector("button")?.textContent).toBe("Retry");
   });
 });
