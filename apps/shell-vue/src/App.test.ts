@@ -6,6 +6,10 @@ import { createRouter, createWebHistory, type Router } from "vue-router";
 import App from "./App.vue";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
+const remotePreloaderMocks = vi.hoisted(() => ({
+  preload: vi.fn(),
+}));
+
 vi.mock("./runtime-manifest", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./runtime-manifest")>();
 
@@ -20,6 +24,9 @@ vi.mock("@federlet/vue-shell", async (importOriginal) => {
 
   return {
     ...actual,
+    createRemotePreloader: vi.fn(() => ({
+      preload: remotePreloaderMocks.preload,
+    })),
     RemoteAppBoundary: defineComponent({
       props: {
         route: {
@@ -82,6 +89,7 @@ afterEach(() => {
   host = null;
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
+  remotePreloaderMocks.preload.mockReset();
 });
 
 describe("Vue Shell runtime routes", () => {
@@ -135,5 +143,67 @@ describe("Vue Shell runtime routes", () => {
 
     expect(document.body.textContent).toContain("Orders");
     expect(document.body.textContent).toContain("remote_orders");
+  });
+
+  it("preloads a remote when navigation links receive pointer or focus intent", async () => {
+    const ordersRoute = {
+      basename: "/orders",
+      exposedModule: "./mount",
+      id: "orders",
+      path: "/orders/*",
+      remoteName: "remote_orders",
+      title: "Orders",
+    };
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([ordersRoute]);
+    remotePreloaderMocks.preload.mockResolvedValue(undefined);
+
+    await renderApp("/");
+    await flushPromises();
+    await nextTick();
+
+    const ordersLinks = Array.from(document.querySelectorAll("a")).filter(
+      (link) => link.textContent?.includes("Orders"),
+    );
+
+    ordersLinks[0]?.dispatchEvent(new MouseEvent("mouseenter"));
+    ordersLinks[0]?.dispatchEvent(new FocusEvent("focus"));
+    await flushPromises();
+
+    expect(remotePreloaderMocks.preload).toHaveBeenCalledTimes(2);
+    expect(remotePreloaderMocks.preload).toHaveBeenNthCalledWith(1, ordersRoute);
+    expect(remotePreloaderMocks.preload).toHaveBeenNthCalledWith(2, ordersRoute);
+  });
+
+  it("preloads the target remote before mounting it on direct navigation", async () => {
+    let resolvePreload: () => void = () => undefined;
+    const ordersRoute = {
+      basename: "/orders",
+      exposedModule: "./mount",
+      id: "orders",
+      path: "/orders/*",
+      remoteName: "remote_orders",
+      title: "Orders",
+    };
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([ordersRoute]);
+    remotePreloaderMocks.preload.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePreload = resolve;
+        }),
+    );
+
+    await renderApp("/orders");
+    await flushPromises();
+    await nextTick();
+
+    expect(remotePreloaderMocks.preload).toHaveBeenCalledWith(ordersRoute);
+    expect(document.body.textContent).toContain("Loading remote routes...");
+    expect(document.body.textContent).not.toContain("Boundary Orders");
+
+    resolvePreload();
+    await flushPromises();
+    await nextTick();
+
+    expect(document.body.textContent).toContain("Boundary Orders");
   });
 });

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createCircuitBreakerStore,
   mountRemoteApp,
+  preloadRemoteApp,
   RemoteLoadErrorCode,
   RemoteLoadError,
 } from "./index";
@@ -80,6 +81,27 @@ describe("mountRemoteApp resilience", () => {
     expect(loader).toHaveBeenCalledTimes(3);
     expect(delay).toHaveBeenNthCalledWith(1, 300);
     expect(delay).toHaveBeenNthCalledWith(2, 600);
+  });
+
+  it("retries retryable preload failures and resolves without mounting", async () => {
+    const delay = vi.fn(() => Promise.resolve());
+    const mount = vi.fn(() => ({ unmount: vi.fn() }));
+    const loader = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary outage"))
+      .mockResolvedValueOnce({ mount });
+
+    await preloadRemoteApp(route, loader, {
+      retry: {
+        backoffBaseMs: 300,
+        delay,
+        maxAttempts: 2,
+      },
+    });
+
+    expect(loader).toHaveBeenCalledTimes(2);
+    expect(delay).toHaveBeenCalledWith(300);
+    expect(mount).not.toHaveBeenCalled();
   });
 
   it("does not retry protocol errors", async () => {

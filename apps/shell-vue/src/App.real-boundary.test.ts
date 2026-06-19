@@ -14,7 +14,7 @@ import {
   RouterView,
   type Router,
 } from "vue-router";
-import { mountRemoteApp } from "@federlet/mf-runtime";
+import { mountRemoteApp, preloadRemoteApp } from "@federlet/mf-runtime";
 import App from "./App.vue";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 import type { MicroAppContext } from "@federlet/shared-types";
@@ -34,11 +34,13 @@ vi.mock("@federlet/mf-runtime", async (importOriginal) => {
   return {
     ...actual,
     mountRemoteApp: vi.fn(),
+    preloadRemoteApp: vi.fn(),
   };
 });
 
 const mockedLoadRuntimeRemoteRoutes = vi.mocked(loadRuntimeRemoteRoutes);
 const mockedMountRemoteApp = vi.mocked(mountRemoteApp);
+const mockedPreloadRemoteApp = vi.mocked(preloadRemoteApp);
 
 let app: VueApp<Element> | null = null;
 let router: Router | null = null;
@@ -85,6 +87,7 @@ afterEach(() => {
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
   mockedMountRemoteApp.mockReset();
+  mockedPreloadRemoteApp.mockReset();
 });
 
 describe("Vue Shell real RemoteAppBoundary integration", () => {
@@ -99,6 +102,7 @@ describe("Vue Shell real RemoteAppBoundary integration", () => {
         title: "Vue Remote",
       },
     ]);
+    mockedPreloadRemoteApp.mockResolvedValue(undefined);
     mockedMountRemoteApp.mockImplementation(async (_route, context) => {
       const remoteApp = createNestedRouterRemote(context);
       remoteApp.mount(context.container);

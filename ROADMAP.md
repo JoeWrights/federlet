@@ -61,7 +61,7 @@
 - [x] remote 加载超时控制。
 - [x] remote 加载失败重试策略。
 - [x] remote 熔断和降级策略。
-- [ ] remote 预加载：进入页面前提前加载 remoteEntry 或关键 chunk。
+- [x] remote 预加载：进入页面前提前加载 remoteEntry 或关键 chunk。
 - [x] remote 资源缓存策略：remoteEntry 短缓存，chunk 长缓存。
 - [ ] 跨应用事件总线规范化（部分完成）：已有基础 emit/on/unsubscribe，尚未定义事件命名、payload 类型和订阅生命周期规范。
 - [ ] 全局错误边界（部分完成）：已有 RemoteAppBoundary 捕获加载和 mount 错误，尚未覆盖 remote 渲染期异常。

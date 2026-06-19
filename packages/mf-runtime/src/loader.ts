@@ -385,6 +385,94 @@ export async function defaultRemoteLoader(
   return remoteModule;
 }
 
+function createRemoteModuleName(route: RemoteRouteConfig) {
+  return `${route.remoteName}/${normalizeExposedModule(route.exposedModule)}`;
+}
+
+function resolveCircuitBreakerOptions(options: RemoteLoadOptions) {
+  const circuitOptions = options.circuitBreaker ?? {};
+
+  return {
+    circuitCooldownMs:
+      circuitOptions === false
+        ? DEFAULT_REMOTE_CIRCUIT_COOLDOWN_MS
+        : circuitOptions.cooldownMs ?? DEFAULT_REMOTE_CIRCUIT_COOLDOWN_MS,
+    circuitFailureThreshold:
+      circuitOptions === false
+        ? DEFAULT_REMOTE_CIRCUIT_FAILURE_THRESHOLD
+        : circuitOptions.failureThreshold ?? DEFAULT_REMOTE_CIRCUIT_FAILURE_THRESHOLD,
+    circuitStore:
+      circuitOptions === false
+        ? undefined
+        : circuitOptions.store ?? defaultCircuitBreakerStore,
+  };
+}
+
+async function loadRemoteMountModule(
+  route: RemoteRouteConfig,
+  loader: RemoteModuleLoader,
+  options: RemoteLoadOptions,
+) {
+  const moduleName = createRemoteModuleName(route);
+  const remoteModule = (await loadRemoteModuleWithPolicy(
+    moduleName,
+    route,
+    loader,
+    options,
+  )) as Partial<RemoteMountModule>;
+
+  // 在真正调用 remote 前做协议校验，避免把不完整模块挂进 Shell。
+  if (typeof remoteModule.mount !== "function") {
+    throw createRemoteLoadError(
+      RemoteLoadErrorCode.ProtocolError,
+      `Remote ${moduleName} does not expose a mount function.`,
+      route,
+    );
+  }
+
+  return remoteModule as RemoteMountModule;
+}
+
+/**
+ * 提前加载 remote 的挂载模块并校验协议，但不执行 `mount()`。
+ *
+ * 用于 Shell 在用户表达导航意图时预热 remoteEntry 和关键暴露模块。
+ */
+export async function preloadRemoteApp(
+  route: RemoteRouteConfig,
+  loader: RemoteModuleLoader = defaultRemoteLoader,
+  options: RemoteLoadOptions = {},
+): Promise<void> {
+  const { circuitCooldownMs, circuitFailureThreshold, circuitStore } =
+    resolveCircuitBreakerOptions(options);
+
+  if (circuitStore && !circuitStore.canAttempt(route.remoteName, circuitCooldownMs)) {
+    throw createRemoteLoadError(
+      RemoteLoadErrorCode.CircuitOpen,
+      `Remote ${route.remoteName} is temporarily unavailable.`,
+      route,
+    );
+  }
+
+  try {
+    await loadRemoteMountModule(route, loader, options);
+    circuitStore?.recordSuccess(route.remoteName);
+  } catch (error) {
+    const remoteError =
+      error instanceof RemoteLoadError
+        ? error
+        : createRemoteLoadError(
+            RemoteLoadErrorCode.LoadFailed,
+            `Remote ${createRemoteModuleName(route)} failed to preload.`,
+            route,
+            error,
+          );
+
+    circuitStore?.recordFailure(route.remoteName, circuitFailureThreshold);
+    throw remoteError;
+  }
+}
+
 /**
  * 根据 Shell 路由配置加载并挂载一个 remote 应用。
  *
@@ -399,22 +487,9 @@ export async function mountRemoteApp(
   loader: RemoteModuleLoader = defaultRemoteLoader,
   options: RemoteLoadOptions = {},
 ): Promise<MicroAppInstance> {
-  const moduleName = `${route.remoteName}/${normalizeExposedModule(
-    route.exposedModule,
-  )}`;
-  const circuitOptions = options.circuitBreaker ?? {};
-  const circuitStore =
-    circuitOptions === false
-      ? undefined
-      : circuitOptions.store ?? defaultCircuitBreakerStore;
-  const circuitCooldownMs =
-    circuitOptions === false
-      ? DEFAULT_REMOTE_CIRCUIT_COOLDOWN_MS
-      : circuitOptions.cooldownMs ?? DEFAULT_REMOTE_CIRCUIT_COOLDOWN_MS;
-  const circuitFailureThreshold =
-    circuitOptions === false
-      ? DEFAULT_REMOTE_CIRCUIT_FAILURE_THRESHOLD
-      : circuitOptions.failureThreshold ?? DEFAULT_REMOTE_CIRCUIT_FAILURE_THRESHOLD;
+  const moduleName = createRemoteModuleName(route);
+  const { circuitCooldownMs, circuitFailureThreshold, circuitStore } =
+    resolveCircuitBreakerOptions(options);
 
   if (circuitStore && !circuitStore.canAttempt(route.remoteName, circuitCooldownMs)) {
     throw createRemoteLoadError(
@@ -425,22 +500,7 @@ export async function mountRemoteApp(
   }
 
   try {
-    const remoteModule = (await loadRemoteModuleWithPolicy(
-      moduleName,
-      route,
-      loader,
-      options,
-    )) as Partial<RemoteMountModule>;
-
-    // 在真正调用 remote 前做协议校验，避免把不完整模块挂进 Shell。
-    if (typeof remoteModule.mount !== "function") {
-      throw createRemoteLoadError(
-        RemoteLoadErrorCode.ProtocolError,
-        `Remote ${moduleName} does not expose a mount function.`,
-        route,
-      );
-    }
-
+    const remoteModule = await loadRemoteMountModule(route, loader, options);
     const instance = await remoteModule.mount(context);
     circuitStore?.recordSuccess(route.remoteName);
     return instance;

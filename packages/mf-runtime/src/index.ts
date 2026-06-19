@@ -9,6 +9,7 @@ export {
   defaultRemoteLoader,
   mountRemoteApp,
   normalizeExposedModule,
+  preloadRemoteApp,
   RemoteLoadError,
   RemoteLoadErrorCode,
   type RemoteCircuitBreakerOptions,

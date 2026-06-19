@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { RemoteAppBoundary } from "@federlet/vue-shell";
+import { createRemotePreloader, RemoteAppBoundary } from "@federlet/vue-shell";
 import type { RemoteRouteConfig } from "@federlet/shared-types";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
@@ -10,14 +10,22 @@ const route = useRoute();
 const router = useRouter();
 const routes = ref<RemoteRouteConfig[]>(remoteRoutes);
 const routesReady = ref(false);
+const remotePreloader = createRemotePreloader();
+let removePreloadGuard: (() => void) | undefined;
+
+function findRemoteRouteByPath(
+  path: string,
+  remoteRouteConfigs: RemoteRouteConfig[],
+) {
+  return remoteRouteConfigs.find(
+    (remoteRoute) =>
+      path === remoteRoute.basename ||
+      path.startsWith(`${remoteRoute.basename}/`),
+  );
+}
 
 const currentRemoteRoute = computed(() =>
-  routesReady.value
-    ? routes.value.find((remoteRoute) =>
-        route.path === remoteRoute.basename ||
-        route.path.startsWith(`${remoteRoute.basename}/`),
-      )
-    : undefined,
+  routesReady.value ? findRemoteRouteByPath(route.path, routes.value) : undefined,
 );
 
 const isHome = computed(() => route.path === "/");
@@ -25,16 +33,44 @@ const shouldShowRouteLoading = computed(
   () => !routesReady.value && !isHome.value,
 );
 
+async function preloadRemoteRoute(remoteRoute: RemoteRouteConfig) {
+  try {
+    await remotePreloader.preload(remoteRoute);
+  } catch (error) {
+    console.error(`Failed to preload remote ${remoteRoute.id}`, error);
+  }
+}
+
 onMounted(async () => {
   const runtimeRoutes = await loadRuntimeRemoteRoutes({
     fallbackRoutes: remoteRoutes,
   });
   routes.value = runtimeRoutes;
-  routesReady.value = true;
 
-  if (!isHome.value && !currentRemoteRoute.value) {
+  const initialRemoteRoute = findRemoteRouteByPath(route.path, runtimeRoutes);
+
+  if (!isHome.value && !initialRemoteRoute) {
+    routesReady.value = true;
     await router.replace("/");
+    return;
   }
+
+  if (initialRemoteRoute) {
+    await preloadRemoteRoute(initialRemoteRoute);
+  }
+
+  routesReady.value = true;
+  removePreloadGuard = router.beforeResolve(async (to) => {
+    const targetRemoteRoute = findRemoteRouteByPath(to.path, routes.value);
+
+    if (targetRemoteRoute) {
+      await preloadRemoteRoute(targetRemoteRoute);
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  removePreloadGuard?.();
 });
 </script>
 
@@ -49,6 +85,8 @@ onMounted(async () => {
           :to="remoteRoute.basename"
           class="shell__nav-link"
           active-class="shell__nav-link--active"
+          @focus="preloadRemoteRoute(remoteRoute)"
+          @mouseenter="preloadRemoteRoute(remoteRoute)"
         >
           {{ remoteRoute.title }}
         </RouterLink>
@@ -69,6 +107,8 @@ onMounted(async () => {
           :key="remoteRoute.id"
           :to="remoteRoute.basename"
           class="remote-card"
+          @focus="preloadRemoteRoute(remoteRoute)"
+          @mouseenter="preloadRemoteRoute(remoteRoute)"
         >
           <span>{{ remoteRoute.title }}</span>
           <strong>{{ remoteRoute.remoteName }}</strong>

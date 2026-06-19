@@ -1,14 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { RemoteAppBoundary } from "@federlet/react-shell";
+import { createRemotePreloader, RemoteAppBoundary } from "@federlet/react-shell";
 import type { RemoteRouteConfig } from "@federlet/shared-types";
+import type { RemotePreloader } from "@federlet/react-shell";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
 /**
  * Shell 首页，展示当前已登记的 remote 入口。
  */
-function HomePage({ routes }: { routes: RemoteRouteConfig[] }) {
+function HomePage({
+  onPreloadRoute,
+  routes,
+}: {
+  onPreloadRoute: (route: RemoteRouteConfig) => void;
+  routes: RemoteRouteConfig[];
+}) {
   return (
     <main className="home">
       <p className="eyebrow">Rspack Module Federation</p>
@@ -20,7 +27,13 @@ function HomePage({ routes }: { routes: RemoteRouteConfig[] }) {
 
       <div className="remote-grid">
         {routes.map((route) => (
-          <Link key={route.id} to={route.basename} className="remote-card">
+          <Link
+            key={route.id}
+            to={route.basename}
+            className="remote-card"
+            onFocus={() => onPreloadRoute(route)}
+            onMouseEnter={() => onPreloadRoute(route)}
+          >
             <span>{route.title}</span>
             <strong>{route.remoteName}</strong>
           </Link>
@@ -30,12 +43,55 @@ function HomePage({ routes }: { routes: RemoteRouteConfig[] }) {
   );
 }
 
+function PreloadedRemoteRoute({
+  preloadRoute,
+  route,
+}: {
+  preloadRoute: (route: RemoteRouteConfig) => Promise<void>;
+  route: RemoteRouteConfig;
+}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void preloadRoute(route).finally(() => {
+      if (!cancelled) {
+        setReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preloadRoute, route]);
+
+  if (!ready) {
+    return <main className="home">Loading remote routes...</main>;
+  }
+
+  return <RemoteAppBoundary route={route} />;
+}
+
 /**
  * 创建远程路由元素
  * @param route 远程路由配置
  * @returns 远程路由元素
  */
-export function createRemoteRouteElement(route: RemoteRouteConfig) {
+export function createRemoteRouteElement(
+  route: RemoteRouteConfig,
+  preloadRoute?: (route: RemoteRouteConfig) => Promise<void>,
+) {
+  if (preloadRoute) {
+    return (
+      <PreloadedRemoteRoute
+        key={route.id}
+        route={route}
+        preloadRoute={preloadRoute}
+      />
+    );
+  }
+
   return <RemoteAppBoundary key={route.id} route={route} />;
 }
 
@@ -47,7 +103,21 @@ export function createRemoteRouteElement(route: RemoteRouteConfig) {
 export function App() {
   const [routes, setRoutes] = useState<RemoteRouteConfig[]>(remoteRoutes);
   const [routesReady, setRoutesReady] = useState(false);
+  const [remotePreloader] = useState<RemotePreloader>(() =>
+    createRemotePreloader(),
+  );
   const remoteRouteElements = routesReady ? routes : [];
+
+  const preloadRemoteRoute = useCallback(
+    async (route: RemoteRouteConfig) => {
+      try {
+        await remotePreloader.preload(route);
+      } catch (error) {
+        console.error(`Failed to preload remote ${route.id}`, error);
+      }
+    },
+    [remotePreloader],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +147,12 @@ export function App() {
             <NavLink
               key={route.id}
               to={route.basename}
+              onFocus={() => {
+                void preloadRemoteRoute(route);
+              }}
+              onMouseEnter={() => {
+                void preloadRemoteRoute(route);
+              }}
               className={({ isActive }) =>
                 isActive
                   ? "shell__nav-link shell__nav-link--active"
@@ -90,12 +166,22 @@ export function App() {
       </aside>
 
       <Routes>
-        <Route path="/" element={<HomePage routes={routes} />} />
+        <Route
+          path="/"
+          element={
+            <HomePage
+              routes={routes}
+              onPreloadRoute={(route) => {
+                void preloadRemoteRoute(route);
+              }}
+            />
+          }
+        />
         {remoteRouteElements.map((route) => (
           <Route
             key={route.id}
             path={route.path}
-            element={createRemoteRouteElement(route)}
+            element={createRemoteRouteElement(route, preloadRemoteRoute)}
           />
         ))}
         <Route

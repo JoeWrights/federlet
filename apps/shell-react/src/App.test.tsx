@@ -7,6 +7,10 @@ import { MemoryRouter } from "react-router-dom";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 import { App, createRemoteRouteElement } from "./App";
 
+const remotePreloaderMocks = vi.hoisted(() => ({
+  preload: vi.fn(),
+}));
+
 vi.mock("./runtime-manifest", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./runtime-manifest")>();
 
@@ -17,11 +21,12 @@ vi.mock("./runtime-manifest", async (importOriginal) => {
 });
 
 vi.mock("@federlet/react-shell", () => ({
-  RemoteAppBoundary: ({
-    route,
-  }: {
-    route: { title: string };
-  }) => <section>Boundary {route.title}</section>,
+  createRemotePreloader: vi.fn(() => ({
+    preload: remotePreloaderMocks.preload,
+  })),
+  RemoteAppBoundary: ({ route }: { route: { title: string } }) => (
+    <section>Boundary {route.title}</section>
+  ),
 }));
 
 const mockedLoadRuntimeRemoteRoutes = vi.mocked(loadRuntimeRemoteRoutes);
@@ -37,6 +42,7 @@ afterEach(() => {
   root = null;
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
+  remotePreloaderMocks.preload.mockReset();
 });
 
 describe("createRemoteRouteElement", () => {
@@ -123,6 +129,45 @@ describe("App runtime routes", () => {
     expect(document.body.textContent).toContain("remote_orders");
   });
 
+  it("preloads a remote when navigation links receive pointer or focus intent", async () => {
+    const ordersRoute = {
+      basename: "/orders",
+      exposedModule: "./mount",
+      id: "orders",
+      path: "/orders/*",
+      remoteName: "remote_orders",
+      title: "Orders",
+    };
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([ordersRoute]);
+    remotePreloaderMocks.preload.mockResolvedValue(undefined);
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>,
+      );
+    });
+
+    const ordersLinks = Array.from(document.querySelectorAll("a")).filter(
+      (link) => link.textContent?.includes("Orders"),
+    );
+
+    await act(async () => {
+      ordersLinks[0]?.dispatchEvent(
+        new MouseEvent("mouseover", { bubbles: true }),
+      );
+      ordersLinks[0]?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    });
+
+    expect(remotePreloaderMocks.preload).toHaveBeenCalledTimes(2);
+    expect(remotePreloaderMocks.preload).toHaveBeenNthCalledWith(1, ordersRoute);
+    expect(remotePreloaderMocks.preload).toHaveBeenNthCalledWith(2, ordersRoute);
+  });
+
   it("waits for runtime routes before redirecting unknown dynamic paths", async () => {
     mockedLoadRuntimeRemoteRoutes.mockResolvedValue([
       {
@@ -144,6 +189,46 @@ describe("App runtime routes", () => {
           <App />
         </MemoryRouter>,
       );
+    });
+
+    expect(document.body.textContent).toContain("Boundary Orders");
+  });
+
+  it("preloads the target remote before mounting it on direct navigation", async () => {
+    let resolvePreload: () => void = () => undefined;
+    const ordersRoute = {
+      basename: "/orders",
+      exposedModule: "./mount",
+      id: "orders",
+      path: "/orders/*",
+      remoteName: "remote_orders",
+      title: "Orders",
+    };
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([ordersRoute]);
+    remotePreloaderMocks.preload.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePreload = resolve;
+        }),
+    );
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(
+        <MemoryRouter initialEntries={["/orders"]}>
+          <App />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(remotePreloaderMocks.preload).toHaveBeenCalledWith(ordersRoute);
+    expect(document.body.textContent).toContain("Loading remote routes...");
+    expect(document.body.textContent).not.toContain("Boundary Orders");
+
+    await act(async () => {
+      resolvePreload();
     });
 
     expect(document.body.textContent).toContain("Boundary Orders");

@@ -5,6 +5,7 @@ import {
   createEventBus,
   mountRemoteApp,
   normalizeExposedModule,
+  preloadRemoteApp,
 } from "../src/index";
 import type {
   RemoteMountModule,
@@ -53,6 +54,18 @@ describe("mf-runtime", () => {
     expect(unmount).toHaveBeenCalledOnce();
   });
 
+  it("preloads a remote app module without mounting it", async () => {
+    const mount = vi.fn(() => ({ unmount: vi.fn() }));
+    const loader = vi.fn(
+      async (_moduleName: string): Promise<RemoteMountModule> => ({ mount }),
+    );
+
+    await preloadRemoteApp(route, loader);
+
+    expect(loader).toHaveBeenCalledWith("remote_demo/mount");
+    expect(mount).not.toHaveBeenCalled();
+  });
+
   it("throws a descriptive error when the remote does not expose mount", async () => {
     const loader = vi.fn().mockResolvedValue({});
 
@@ -66,6 +79,14 @@ describe("mf-runtime", () => {
         loader,
       ),
     ).rejects.toThrow("Remote remote_demo/mount does not expose a mount function.");
+  });
+
+  it("throws a descriptive error when preloading a remote without mount", async () => {
+    const loader = vi.fn().mockResolvedValue({});
+
+    await expect(preloadRemoteApp(route, loader)).rejects.toThrow(
+      "Remote remote_demo/mount does not expose a mount function.",
+    );
   });
 
   it("emits events to subscribers and returns an unsubscribe function", () => {

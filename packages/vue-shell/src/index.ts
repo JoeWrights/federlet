@@ -8,7 +8,11 @@ import {
   shallowRef,
   watch,
 } from "vue";
-import { mountRemoteApp, RemoteLoadErrorCode } from "@federlet/mf-runtime";
+import {
+  mountRemoteApp,
+  preloadRemoteApp,
+  RemoteLoadErrorCode,
+} from "@federlet/mf-runtime";
 import {
   captureRemoteDomSnapshot,
   createRemoteContainerClassName as createScopedRemoteContainerClassName,
@@ -73,6 +77,15 @@ export interface UseRemoteAppMountResult {
   errorMessage: Ref<string>;
   retry: () => void;
   status: Ref<RemoteAppStatus>;
+}
+
+export interface CreateRemotePreloaderOptions {
+  loadOptions?: RemoteLoadOptions;
+  loader?: RemoteModuleLoader;
+}
+
+export interface RemotePreloader {
+  preload: (route: RemoteRouteConfig) => Promise<void>;
 }
 
 export const DEFAULT_REMOTE_LOAD_OPTIONS: RemoteLoadOptions = {
@@ -201,6 +214,38 @@ export function createRemoteContainerClassName(remoteName: string) {
     "remote-boundary__container",
     remoteName,
   );
+}
+
+function createRemotePreloadKey(route: RemoteRouteConfig) {
+  return `${route.remoteName}/${route.exposedModule}`;
+}
+
+export function createRemotePreloader({
+  loader,
+  loadOptions,
+}: CreateRemotePreloaderOptions = {}): RemotePreloader {
+  const preloads = new Map<string, Promise<void>>();
+
+  return {
+    preload(route) {
+      const key = createRemotePreloadKey(route);
+      const existingPreload = preloads.get(key);
+
+      if (existingPreload) {
+        return existingPreload;
+      }
+
+      const preload = preloadRemoteApp(route, loader, loadOptions).catch(
+        (error: unknown) => {
+          preloads.delete(key);
+          throw error;
+        },
+      );
+      preloads.set(key, preload);
+
+      return preload;
+    },
+  };
 }
 
 function createDefaultMountContext({

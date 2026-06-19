@@ -2,10 +2,15 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp, createCommentVNode, defineComponent, h, nextTick } from "vue";
-import { mountRemoteApp, RemoteLoadErrorCode } from "@federlet/mf-runtime";
+import {
+  mountRemoteApp,
+  preloadRemoteApp,
+  RemoteLoadErrorCode,
+} from "@federlet/mf-runtime";
 import { createRemoteScopeClass } from "@federlet/style-isolation";
 import {
   createRemoteContainerClassName,
+  createRemotePreloader,
   RemoteAppBoundary,
   reportRemoteDomEscapes,
   scheduleRemoteUnmount,
@@ -21,10 +26,12 @@ vi.mock("@federlet/mf-runtime", async (importOriginal) => {
   return {
     ...actual,
     mountRemoteApp: vi.fn(),
+    preloadRemoteApp: vi.fn(),
   };
 });
 
 const mockedMountRemoteApp = vi.mocked(mountRemoteApp);
+const mockedPreloadRemoteApp = vi.mocked(preloadRemoteApp);
 const route: RemoteRouteConfig = {
   basename: "/vue",
   exposedModule: "./mount",
@@ -107,6 +114,47 @@ describe("reportRemoteDomEscapes", () => {
   });
 });
 
+describe("createRemotePreloader", () => {
+  afterEach(() => {
+    mockedPreloadRemoteApp.mockReset();
+  });
+
+  it("deduplicates concurrent preloads for the same remote module", async () => {
+    let resolvePreload: () => void = () => undefined;
+    mockedPreloadRemoteApp.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePreload = resolve;
+        }),
+    );
+    const preloader = createRemotePreloader();
+
+    const first = preloader.preload(route);
+    const second = preloader.preload(route);
+    resolvePreload();
+    await Promise.all([first, second]);
+
+    expect(mockedPreloadRemoteApp).toHaveBeenCalledTimes(1);
+    expect(mockedPreloadRemoteApp).toHaveBeenCalledWith(
+      route,
+      undefined,
+      undefined,
+    );
+  });
+
+  it("clears failed preload entries so later intent can retry", async () => {
+    mockedPreloadRemoteApp
+      .mockRejectedValueOnce(new Error("temporary outage"))
+      .mockResolvedValueOnce(undefined);
+    const preloader = createRemotePreloader();
+
+    await expect(preloader.preload(route)).rejects.toThrow("temporary outage");
+    await preloader.preload(route);
+
+    expect(mockedPreloadRemoteApp).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("RemoteAppBoundary", () => {
   let app: VueApp<Element> | null = null;
   let host: HTMLDivElement | null = null;
@@ -118,6 +166,7 @@ describe("RemoteAppBoundary", () => {
     host = null;
     document.body.innerHTML = "";
     mockedMountRemoteApp.mockReset();
+    mockedPreloadRemoteApp.mockReset();
     vi.restoreAllMocks();
   });
 
