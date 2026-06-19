@@ -10,3 +10,7 @@ export {
   normalizeExposedModule,
   type RemoteModuleLoader,
 } from "./loader";
+export {
+  registerRuntimeRemoteEntries,
+  type RuntimeRemoteEntry,
+} from "./runtime-remotes";

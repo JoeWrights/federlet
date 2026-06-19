@@ -1,0 +1,215 @@
+import { registerRuntimeRemoteEntries } from "@federlet/mf-runtime";
+import type {
+  FederletRuntimeEnvironment,
+  RemoteRouteConfig,
+  RuntimeRemoteManifest,
+  RuntimeRemoteManifestItem,
+  RuntimeRemoteRouteConfig,
+} from "@federlet/shared-types";
+
+declare global {
+  interface Window {
+    __FEDERLET_ENV__?: FederletRuntimeEnvironment;
+  }
+}
+
+/**
+ * 加载运行时 remote 路由的选项。
+ */
+interface LoadRuntimeRemoteRoutesOptions {
+  /**
+   * 回退路由配置。
+   */
+  fallbackRoutes: RemoteRouteConfig[];
+  /**
+   * 注册远程入口的函数。
+   */
+  registerRemoteEntries?: typeof registerRuntimeRemoteEntries;
+  /**
+   * 运行时环境。
+   */
+  runtimeEnv?: FederletRuntimeEnvironment;
+}
+
+/**
+ * 默认的 remote 暴露模块名，用于 fallback 静态配置。
+ */
+const DEFAULT_REMOTE_EXPOSED_MODULE = "./mount";
+
+/**
+ * 获取运行时环境。
+ */
+function getRuntimeEnvironment(): FederletRuntimeEnvironment {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  return window.__FEDERLET_ENV__ ?? {};
+}
+
+/**
+ * 校验值是否为对象。
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * 校验 manifest 中的 remote 是否有效。
+ */
+function isManifestRemote(value: unknown): value is RuntimeRemoteManifestItem {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.path === "string" &&
+    typeof value.title === "string" &&
+    typeof value.remoteName === "string" &&
+    (value.exposedModule === undefined ||
+      typeof value.exposedModule === "string") &&
+    typeof value.basename === "string" &&
+    (typeof value.entry === "string" ||
+      typeof value.entryBaseUrl === "string") &&
+    (value.status === undefined ||
+      value.status === "active" ||
+      value.status === "disabled")
+  );
+}
+
+/**
+ * 校验 runtime remote manifest 是否有效。
+ */
+function isRuntimeRemoteManifest(value: unknown): value is RuntimeRemoteManifest {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.manifestVersion === "string" &&
+    typeof value.generatedAt === "string" &&
+    Array.isArray(value.remotes) &&
+    value.remotes.every(isManifestRemote)
+  );
+}
+
+/**
+ * 将 manifest 中的 remote 转换为 runtime 路由配置。
+ * @param remote - manifest 中的 remote。
+ * @param remoteVersion - remote 版本。
+ * @returns runtime 路由配置。
+ */
+function toRuntimeRoute(
+  remote: RuntimeRemoteManifestItem,
+  remoteVersion: string,
+): RuntimeRemoteRouteConfig {
+  return {
+    basename: remote.basename,
+    entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl, remoteVersion),
+    exposedModule: remote.exposedModule ?? DEFAULT_REMOTE_EXPOSED_MODULE,
+    id: remote.id,
+    path: remote.path,
+    remoteName: remote.remoteName,
+    title: remote.title,
+  };
+}
+
+/**
+ * 创建 remote entry 的 URL。
+ * @param entryBaseUrl - remote entry 的 base URL。
+ * @param remoteVersion - remote 版本。
+ * @returns remote entry 的 URL。
+ */
+function createRemoteEntryUrl(entryBaseUrl: string | undefined, remoteVersion: string) {
+  if (!entryBaseUrl) {
+    throw new Error("Remote manifest item is missing entryBaseUrl.");
+  }
+
+  const normalizedBaseUrl = entryBaseUrl.endsWith("/")
+    ? entryBaseUrl
+    : `${entryBaseUrl}/`;
+
+  return `${normalizedBaseUrl}remoteEntry.js?v=${encodeURIComponent(remoteVersion)}`;
+}
+
+/**
+ * 将 runtime 路由配置转换为 remote 路由配置。
+ * @param route - runtime 路由配置。
+ * @returns remote 路由配置。
+ */
+function toRemoteRoute(route: RuntimeRemoteRouteConfig): RemoteRouteConfig {
+  return {
+    basename: route.basename,
+    exposedModule: route.exposedModule,
+    id: route.id,
+    path: route.path,
+    remoteName: route.remoteName,
+    title: route.title,
+  };
+}
+
+export function createRemoteRoutesFromManifest(
+  manifest: RuntimeRemoteManifest,
+  remoteVersion: string,
+): RemoteRouteConfig[] {
+  return manifest.remotes
+    .filter((remote) => remote.status !== "disabled")
+    .map((remote) => toRuntimeRoute(remote, remoteVersion))
+    .map(toRemoteRoute);
+}
+
+/**
+ * 注册 manifest 中的 remote 路由。
+ * @param manifest - manifest。
+ * @param registerRemoteEntries - 注册远程入口的函数。
+ * @param remoteVersion - remote 版本。
+ * @returns runtime 路由配置。
+ */
+function registerManifestRoutes(
+  manifest: RuntimeRemoteManifest,
+  registerRemoteEntries: typeof registerRuntimeRemoteEntries,
+  remoteVersion: string,
+) {
+  const runtimeRoutes = manifest.remotes
+    .filter((remote) => remote.status !== "disabled")
+    .map((remote) => toRuntimeRoute(remote, remoteVersion));
+
+  registerRemoteEntries(
+    runtimeRoutes.map((route) => ({
+      entry: route.entry,
+      remoteName: route.remoteName,
+    })),
+  );
+
+  return runtimeRoutes.map(toRemoteRoute);
+}
+
+/**
+ * 加载运行时 remote 路由。
+ * @param options - 加载运行时 remote 路由的选项。
+ * @returns 运行时 remote 路由配置。
+ */
+export async function loadRuntimeRemoteRoutes({
+  fallbackRoutes,
+  registerRemoteEntries = registerRuntimeRemoteEntries,
+  runtimeEnv = getRuntimeEnvironment(),
+}: LoadRuntimeRemoteRoutesOptions): Promise<RemoteRouteConfig[]> {
+  if (runtimeEnv.manifest) {
+    if (!isRuntimeRemoteManifest(runtimeEnv.manifest)) {
+      console.error("Injected runtime remote manifest is invalid", {
+        runtimeEnv: runtimeEnv.runtimeEnv,
+      });
+
+      return fallbackRoutes;
+    }
+
+    return registerManifestRoutes(
+      runtimeEnv.manifest,
+      registerRemoteEntries,
+      runtimeEnv.remoteVersion ?? runtimeEnv.manifest.manifestVersion,
+    );
+  }
+
+  return fallbackRoutes;
+}

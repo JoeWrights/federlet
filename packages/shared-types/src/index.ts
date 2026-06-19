@@ -74,6 +74,61 @@ export interface RemoteRouteConfig {
 }
 
 /**
+ * Shell 运行时环境配置，由发布流水线从 Apollo 配置中心读取后注入。
+ */
+export interface FederletRuntimeEnvironment {
+  /** 当前运行环境，例如 `local`、`test`、`staging` 或 `prod`。 */
+  runtimeEnv?: string;
+
+  /** Apollo 直接注入的 remote manifest。 */
+  manifest?: RuntimeRemoteManifest;
+
+  /** Apollo 中当前配置版本，便于日志和发布校验。 */
+  manifestVersion?: string;
+
+  /** remoteEntry 固定文件名时使用的版本参数。 */
+  remoteVersion?: string;
+}
+
+/**
+ * manifest 中声明的单个 remote。
+ */
+export interface RuntimeRemoteManifestItem
+  extends Omit<RemoteRouteConfig, "exposedModule"> {
+  /** remote 暴露模块名，默认约定为 `./mount`。 */
+  exposedModule?: string;
+
+  /** remoteEntry.js 的完整访问地址，可以包含版本查询参数。 */
+  entry?: string;
+
+  /** remote 站点根地址，运行时会拼接 remoteEntry 文件名和版本参数。 */
+  entryBaseUrl?: string;
+
+  /** remote 当前是否允许被 Shell 加载。 */
+  status?: "active" | "disabled";
+
+  /** 运行时治理扩展元数据，后续用于版本、缓存、熔断等策略。 */
+  meta?: Record<string, unknown>;
+}
+
+/**
+ * Shell 启动时读取的 remote manifest。
+ */
+export interface RuntimeRemoteManifest {
+  manifestVersion: string;
+  generatedAt: string;
+  remotes: RuntimeRemoteManifestItem[];
+}
+
+/**
+ * Shell 内部使用的动态 remote 定义。
+ */
+export interface RuntimeRemoteRouteConfig extends RemoteRouteConfig {
+  /** 用于动态注册 Module Federation remote 的 remoteEntry 地址。 */
+  entry: string;
+}
+
+/**
  * Module Federation 加载出来的 remote 模块形状。
  */
 export interface RemoteMountModule {

@@ -1,12 +1,14 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import type { RemoteRouteConfig } from "@federlet/shared-types";
 import { RemoteAppBoundary } from "./RemoteAppBoundary";
 import { remoteRoutes } from "./remote-routes";
+import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
 /**
  * Shell 首页，展示当前已登记的 remote 入口。
  */
-function HomePage() {
+function HomePage({ routes }: { routes: RemoteRouteConfig[] }) {
   return (
     <main className="home">
       <p className="eyebrow">Rspack Module Federation</p>
@@ -17,7 +19,7 @@ function HomePage() {
       </p>
 
       <div className="remote-grid">
-        {remoteRoutes.map((route) => (
+        {routes.map((route) => (
           <Link key={route.id} to={route.basename} className="remote-card">
             <span>{route.title}</span>
             <strong>{route.remoteName}</strong>
@@ -43,6 +45,26 @@ export function createRemoteRouteElement(route: RemoteRouteConfig) {
  * 负责全局布局、导航高亮和把 remote 路由交给 `RemoteAppBoundary` 挂载。
  */
 export function App() {
+  const [routes, setRoutes] = useState<RemoteRouteConfig[]>(remoteRoutes);
+  const [routesReady, setRoutesReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void loadRuntimeRemoteRoutes({ fallbackRoutes: remoteRoutes }).then(
+      (runtimeRoutes) => {
+        if (!cancelled) {
+          setRoutes(runtimeRoutes);
+          setRoutesReady(true);
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="shell">
       <aside className="shell__sidebar">
@@ -50,7 +72,7 @@ export function App() {
           Federlet
         </Link>
         <nav>
-          {remoteRoutes.map((route) => (
+          {routes.map((route) => (
             <NavLink
               key={route.id}
               to={route.basename}
@@ -67,15 +89,24 @@ export function App() {
       </aside>
 
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        {remoteRoutes.map((route) => (
+        <Route path="/" element={<HomePage routes={routes} />} />
+        {routes.map((route) => (
           <Route
             key={route.id}
             path={route.path}
             element={createRemoteRouteElement(route)}
           />
         ))}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="*"
+          element={
+            routesReady ? (
+              <Navigate to="/" replace />
+            ) : (
+              <main className="home">Loading remote routes...</main>
+            )
+          }
+        />
       </Routes>
     </div>
   );

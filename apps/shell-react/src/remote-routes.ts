@@ -1,34 +1,32 @@
-import type { RemoteRouteConfig } from "@federlet/shared-types";
+import type {
+  FederletRuntimeEnvironment,
+  RemoteRouteConfig,
+} from "@federlet/shared-types";
+import { DEFAULT_APOLLO_RUNTIME_CONFIG } from "./config/apollo";
+import { DEFAULT_RUNTIME_ENV } from "./config/constants";
+import { createRemoteRoutesFromManifest } from "./runtime-manifest";
 
 /**
- * Shell 当前接入的 remote 路由表。
+ * 根据 Apollo 运行时配置生成 fallback remote 路由。
  *
- * 新增 remote 时优先在这里登记入口路径、Module Federation 名称和暴露模块，
- * Shell 其他位置只消费这份稳定配置。
+ * Shell 本地不再维护第二份手写 remote 表，避免 fallback 和 Apollo 配置漂移。
  */
-export const remoteRoutes: RemoteRouteConfig[] = [
-  {
-    id: "react-dashboard",
-    path: "/react/*",
-    title: "React Remote",
-    remoteName: "remote_react",
-    exposedModule: "./mount",
-    basename: "/react",
-  },
-  {
-    id: "vue-analytics",
-    path: "/vue/*",
-    title: "Vue Remote",
-    remoteName: "remote_vue",
-    exposedModule: "./mount",
-    basename: "/vue",
-  },
-  {
-    id: "umi-react",
-    path: "/umi/*",
-    title: "Umi React Remote",
-    remoteName: "remote_umi_react",
-    exposedModule: "./mount",
-    basename: "/umi",
-  },
-];
+export function createFallbackRemoteRoutes(
+  runtimeConfig: FederletRuntimeEnvironment,
+): RemoteRouteConfig[] {
+  if (!runtimeConfig.manifest) {
+    return [];
+  }
+
+  return createRemoteRoutesFromManifest(
+    runtimeConfig.manifest,
+    runtimeConfig.remoteVersion ?? runtimeConfig.manifestVersion ?? DEFAULT_RUNTIME_ENV,
+  );
+}
+
+/**
+ * 远程路由。
+ */
+export const remoteRoutes = createFallbackRemoteRoutes(
+  DEFAULT_APOLLO_RUNTIME_CONFIG,
+);

@@ -29,9 +29,6 @@ export default createReactHostConfig({
       strictVersion: true,
     },
   },
-  remotes: {
-    remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
-    remote_vue: "remote_vue@http://localhost:3002/remoteEntry.js",
-    remote_umi_react: "remote_umi_react@http://localhost:3003/remoteEntry.js",
-  },
+  // remoteEntry 地址由 Apollo 注入的 manifest 在运行时动态注册。
+  remotes: {},
 });
