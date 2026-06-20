@@ -24,6 +24,20 @@ import { RemoteAppBoundary } from "@federlet/vue-shell";
 - 开发环境报告 remote DOM 逃逸。
 - 保留 Loading、Error 和 Retry 默认 UI。
 
+## Shell 启动时序
+
+Vue Shell 使用 catch-all route 承载首页和 remote 子路由时，入口文件必须等 Vue Router 完成初始导航后再挂载根应用：
+
+```ts
+const app = createApp(App);
+
+app.use(router);
+await router.isReady();
+app.mount("#root");
+```
+
+如果省略 `await router.isReady()`，强刷新 `/react`、`/vue`、`/umi` 等 remote 子路由时，`useRoute()` 在首帧可能仍是默认 `/`，Shell 会先渲染首页，再切换到 remote，表现为 remote 页面刷新时先闪一下 Shell 首页。
+
 ## 公共能力
 
 `@federlet/vue-shell` 的框架无关工具由 `@federlet/shell-core` 提供，包括 `DEFAULT_REMOTE_LOAD_OPTIONS`、`createRemotePreloader()`、`createRemoteErrorMessage()`、`createRemoteErrorDetails()`、`formatRemoteErrorDetails()`、`reportRemoteDomEscapes()` 和 `scheduleRemoteUnmount()`。

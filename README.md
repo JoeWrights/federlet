@@ -178,6 +178,22 @@ Attempted to synchronously unmount a root while React was already rendering.
 
 Shell 需要确保每个 remote route 使用独立的 Boundary 实例，例如给 `RemoteAppBoundary` 加 `key={route.id}`。这样旧 remote 的延迟卸载只会清理旧 container，不会误伤新 remote。
 
+### Vue Shell 强刷新 remote 子路由先闪首页
+
+Vue Shell 如果在 Vue Router 完成初始导航前就 `mount` 根应用，强刷新 `/react`、`/vue`、`/umi` 等 remote 子路由时，`useRoute()` 可能短暂拿到默认 `/`，导致 Shell 首页先渲染一次，然后才切到 remote。
+
+启动入口应先安装 router，再等待 `router.isReady()`，最后挂载应用：
+
+```ts
+const app = createApp(App);
+
+app.use(router);
+await router.isReady();
+app.mount("#root");
+```
+
+React Shell 没有这个现象，是因为 `BrowserRouter` 初次渲染会直接从当前 `window.location` 建立匹配状态；Vue Shell 需要显式等待初始导航 ready。
+
 ## 部署建议
 
 Shell 和 remote 独立构建、独立部署。`remoteEntry.js` 使用短缓存，带 hash 的 chunk 使用长缓存。生产环境建议由 manifest 或环境变量提供 remoteEntry 地址，避免把环境 URL 固化到 Shell 构建产物中。
