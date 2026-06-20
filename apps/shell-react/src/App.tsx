@@ -135,6 +135,9 @@ function createRemoteMountContextFactory(eventBus: MicroEventBus) {
     basename: route.basename,
     container,
     eventBus,
+    onError(error: unknown) {
+      console.error(`Remote runtime error from ${route.id}`, error);
+    },
     props: {
       mountedAt: new Date().toISOString(),
     },

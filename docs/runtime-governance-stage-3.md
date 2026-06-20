@@ -489,7 +489,8 @@ flowchart TD
 ### 目标与当前问题
 
 - 目标：把现有事件总线从“可用”提升到“可治理”。
-- 问题：当前 `event-bus.ts` 只有基础 `emit/on`，缺少命名与类型约束。
+- 状态：已落地事件命名、payload 类型、运行时校验、审计 meta 和 remote 订阅生命周期规范。
+- 详细说明见 [跨应用事件总线规范化](event-bus-governance.md)。
 
 ### 方案设计
 
@@ -503,8 +504,10 @@ flowchart TD
 
 ### 与现有代码衔接点
 
-- `packages/mf-runtime/src/event-bus.ts`：扩展泛型签名与调试钩子。
-- `packages/shared-types/src/index.ts`：新增事件 map 与 typed bus 接口。
+- `packages/mf-runtime/src/event-bus.ts`：基于 `mitt` 的内部 transport、事件名校验、payload validator、audit hook。
+- `packages/shared-types/src/index.ts`：`FederletEventMap`、`FederletEventMeta`、typed `MicroEventBus`。
+- `apps/shell-react/src/App.tsx`、`apps/shell-vue/src/App.vue`：创建并注入 Shell 级 event bus。
+- `apps/remote-*/src/remote-event-bus.ts`：封装 remote lifecycle 事件和订阅清理。
 
 ### 分阶段落地步骤
 
@@ -532,26 +535,35 @@ flowchart TD
 ### 目标与当前问题
 
 - 目标：remote 渲染异常不影响 Shell 主框架和其他 remote。
-- 问题：当前失败处理主要覆盖加载阶段，渲染期异常隔离不足。
+- 现状：加载、超时、熔断、mount 失败和 remote 独立 root 的运行期渲染异常已统一落到 `RemoteAppBoundary` 的局部降级状态。
 
 ### 方案设计
 
-- Shell 顶层增加 `GlobalRemoteErrorBoundary`：
-  - 捕获 render/lifecycle error
-  - 按 remoteName 记录错误上下文
-  - 展示可重试/回首页降级 UI
-- 与 `RemoteAppBoundary` 联动：
-  - 加载错误、超时错误、渲染错误统一落到可观测事件模型。
+- Shell 通过 `MicroAppContext.onError` 向 remote 注入框架中立的运行期错误上报回调。
+- `RemoteAppBoundary` 接到 `onError` 后：
+  - 按 route 记录错误上下文。
+  - 将当前 remote 区域切换为 `error` 状态。
+  - 复用现有 fallback 和 `Retry` 入口。
+  - 调度当前 remote 实例 `unmount()`，释放框架 root、事件订阅和副作用。
+- React、Vue、Umi remote 在各自框架 root 内捕获运行期错误：
+  - React 19 remote 使用 `createRoot(..., { onCaughtError, onUncaughtError })`。
+  - Vue remote 使用 `app.config.errorHandler`。
+  - Umi/React 17 remote 使用本地 class ErrorBoundary。
+- Shell 侧 React ErrorBoundary 不能直接捕获 remote 独立 root 的后续渲染异常，因此协议回调是主要隔离机制。
 
 ### 与现有代码衔接点
 
-- `apps/shell-react/src/RemoteAppBoundary.tsx`：保持局部状态管理。
-- `apps/shell-react/src/App.tsx`：包裹路由渲染入口。
+- `packages/shared-types/src/index.d.ts`：`MicroAppContext.onError` 定义 remote runtime error 上报协议。
+- `packages/react-shell/src/index.tsx`：`RemoteAppBoundary` 维护局部错误状态、fallback 和重试。
+- `apps/shell-react/src/App.tsx`：创建 mount context 时注入 route 维度的错误日志回调。
+- `apps/remote-react/src/mount.tsx`：接入 React 19 root 错误回调。
+- `apps/remote-vue/src/mount.ts`：接入 Vue runtime error handler。
+- `apps/remote-umi-react/src/mount.tsx`：接入 React 17 ErrorBoundary。
 
-### 分阶段落地步骤
+### 后续增强
 
-- MVP：错误边界 + 基础降级界面。
-- 增强：接入监控平台并关联 trace/用户上下文。
+- 接入监控平台并关联 trace、用户、租户上下文。
+- 将 `onError` 协议写入 remote 接入 checklist，要求未来非 React/Vue/Umi remote 主动转发框架运行期异常。
 
 ### 失败场景与降级策略
 
@@ -564,8 +576,8 @@ flowchart TD
 
 ### 建议测试
 
-- 单测：错误边界 fallback 渲染。
-- E2E：注入 remote render error 验证隔离效果。
+- 单测：`RemoteAppBoundary` fallback 渲染、remote runtime error 上报、初始 mount 失败仍走 mount 失败路径。
+- E2E：注入 remote render error 验证仅当前 remote 区域降级，Shell 导航仍可使用。
 
 ---
 

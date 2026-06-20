@@ -97,6 +97,9 @@ export interface MicroAppContext {
 
   /** 可选的跨应用事件总线。 */
   eventBus?: MicroEventBus;
+
+  /** remote 渲染期或框架生命周期异常上报给 Shell 的回调。 */
+  onError?: (error: unknown) => void;
 }
 
 /**

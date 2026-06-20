@@ -168,6 +168,7 @@ describe("RemoteAppBoundary", () => {
     mockedMountRemoteApp.mockReset();
     mockedPreloadRemoteApp.mockReset();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   async function renderBoundary(props = {}) {
@@ -283,6 +284,51 @@ describe("RemoteAppBoundary", () => {
     await nextTick();
 
     expect(mockedMountRemoteApp).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the fallback and unmounts when a mounted remote reports a runtime error", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const remoteRuntimeError = new Error("remote vue render crashed");
+    const onError = vi.fn();
+    const unmount = vi.fn();
+    let reportRuntimeError: ((error: unknown) => void) | undefined;
+
+    mockedMountRemoteApp.mockImplementation(async (_route, context) => {
+      reportRuntimeError = context.onError;
+
+      return {
+        unmount,
+      };
+    });
+
+    await renderBoundary({
+      onError,
+    });
+    vi.useFakeTimers();
+
+    expect(document.querySelector(".remote-boundary__header")?.textContent)
+      .toContain("ready");
+    expect(reportRuntimeError).toEqual(expect.any(Function));
+
+    reportRuntimeError?.(remoteRuntimeError);
+    await nextTick();
+
+    expect(document.querySelector(".remote-boundary__header")?.textContent)
+      .toContain("error");
+    expect(document.querySelector("[role='alert']")?.textContent).toContain(
+      "Remote app is unavailable.",
+    );
+    expect(onError).toHaveBeenCalledWith(remoteRuntimeError, route);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Remote remote_vue reported a runtime error",
+      remoteRuntimeError,
+    );
+
+    vi.runOnlyPendingTimers();
+
+    expect(unmount).toHaveBeenCalledOnce();
   });
 
   it("shows timeout, retry, and circuit messages with a retry button", async () => {

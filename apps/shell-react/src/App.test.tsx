@@ -84,6 +84,7 @@ describe("createRemoteRouteElement", () => {
       basename: "/vue",
       container,
       eventBus,
+      onError: expect.any(Function),
       props: {
         mountedAt: expect.any(String),
       },

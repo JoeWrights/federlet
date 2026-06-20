@@ -53,6 +53,7 @@ pnpm dev:vite
 ## 架构文档
 
 - [阶段一架构文档](docs/architecture-stage-1.md)
+- [跨应用事件总线规范化](docs/event-bus-governance.md)
 
 ## 微应用接入协议
 

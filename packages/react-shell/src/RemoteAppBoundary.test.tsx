@@ -164,6 +164,7 @@ describe("RemoteAppBoundary", () => {
     mockedMountRemoteApp.mockReset();
     mockedPreloadRemoteApp.mockReset();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   async function renderRemoteBoundary(
@@ -257,6 +258,54 @@ describe("RemoteAppBoundary", () => {
         timeoutMs: 1000,
       }),
     );
+  });
+
+  it("shows the fallback and unmounts when a mounted remote reports a runtime error", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const remoteRuntimeError = new Error("remote render crashed");
+    const onError = vi.fn();
+    const unmount = vi.fn();
+    let reportRuntimeError: ((error: unknown) => void) | undefined;
+
+    mockedMountRemoteApp.mockImplementation(async (_route, context) => {
+      reportRuntimeError = context.onError;
+
+      return {
+        unmount,
+      };
+    });
+
+    await renderRemoteBoundary({
+      onError,
+    });
+
+    expect(document.querySelector(".remote-boundary__header span")?.textContent)
+      .toBe("ready");
+    expect(reportRuntimeError).toEqual(expect.any(Function));
+
+    await act(async () => {
+      reportRuntimeError?.(remoteRuntimeError);
+    });
+
+    expect(document.querySelector(".remote-boundary__header span")?.textContent)
+      .toBe("error");
+    expect(document.querySelector("[role='alert']")?.textContent).toContain(
+      "Remote app is unavailable.",
+    );
+    expect(onError).toHaveBeenCalledWith(remoteRuntimeError, route);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Remote remote_react reported a runtime error",
+      remoteRuntimeError,
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(unmount).toHaveBeenCalledOnce();
   });
 
   it("shows a timeout-specific error message and retry button", async () => {

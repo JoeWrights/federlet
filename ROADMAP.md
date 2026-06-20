@@ -64,7 +64,7 @@
 - [x] remote 预加载：进入页面前提前加载 remoteEntry 或关键 chunk。
 - [x] remote 资源缓存策略：remoteEntry 短缓存，chunk 长缓存。
 - [x] 跨应用事件总线规范化：已定义 `domain.topic.action` 事件命名、`FederletEventMap` payload 类型、运行时 payload 校验、审计 meta 和 remote 订阅生命周期规范。
-- [ ] 全局错误边界（部分完成）：已有 RemoteAppBoundary 捕获加载和 mount 错误，尚未覆盖 remote 渲染期异常。
+- [x] 全局错误边界：RemoteAppBoundary 统一处理加载、mount 和 remote 渲染期异常。
 
 ## 阶段四：样式、隔离与安全
 

@@ -30,15 +30,27 @@ export function mount(context: MicroAppContext): MicroAppInstance {
   let app: VueApp<Element> | null = createApp(App);
   const router = createRemoteRouter(context.basename);
   const eventBusLifecycle = createRemoteEventBusLifecycle(context, REMOTE_NAME);
+  let isMounting = false;
+
+  app.config.errorHandler = (error) => {
+    context.onError?.(error);
+
+    if (isMounting) {
+      throw error;
+    }
+  };
 
   // remote 自己维护内部路由，Shell 只负责把入口路径分配给它。
   app.use(router);
   try {
+    isMounting = true;
     app.mount(context.container);
   } catch (error) {
     app.unmount();
     app = null;
     throw error;
+  } finally {
+    isMounting = false;
   }
 
   try {

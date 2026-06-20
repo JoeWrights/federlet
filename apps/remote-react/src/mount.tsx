@@ -36,7 +36,14 @@ function createDomEscapeProbe(remoteName: string) {
  * Shell 会通过 Module Federation 加载该函数，并传入 DOM 容器和 basename。
  */
 export function mount(context: MicroAppContext): MicroAppInstance {
-  let root: Root | null = createRoot(context.container);
+  let root: Root | null = createRoot(context.container, {
+    onCaughtError(error) {
+      context.onError?.(error);
+    },
+    onUncaughtError(error) {
+      context.onError?.(error);
+    },
+  });
   const domEscapeProbe = createDomEscapeProbe(REMOTE_NAME);
   const eventBusLifecycle = createRemoteEventBusLifecycle(context, REMOTE_NAME);
 
