@@ -1,0 +1,35 @@
+{
+  "name": "@federlet/shell-vue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/run-with-tsx.mjs rspack serve --config rspack.config.ts",
+    "dev:rsbuild": "rsbuild dev --config rsbuild.config.ts",
+    "dev:vite": "node ../../scripts/run-with-tsx.mjs vite --config vite.config.ts",
+    "dev:webpack": "node ../../scripts/run-with-tsx.mjs webpack serve --mode development --config webpack.config.ts",
+    "build": "node ../../scripts/run-with-tsx.mjs rspack build --config rspack.config.ts",
+    "build:rsbuild": "rsbuild build --config rsbuild.config.ts",
+    "build:vite": "node ../../scripts/run-with-tsx.mjs vite build --config vite.config.ts",
+    "build:webpack": "node ../../scripts/run-with-tsx.mjs webpack build --mode production --config webpack.config.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "node ../../scripts/run-with-tsx.mjs vitest run --passWithNoTests",
+    "lint": "vue-tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@federlet/mf-runtime": "workspace:*",
+    "@federlet/shared-types": "workspace:*",
+    "@federlet/vue-shell": "workspace:*",
+    "vue": "^3.5.25",
+    "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@federlet/rsbuild-config": "workspace:*",
+    "@federlet/rspack-config": "workspace:*",
+    "@federlet/tsconfig": "workspace:*",
+    "@federlet/vite-config": "workspace:*",
+    "@federlet/webpack-config": "workspace:*",
+    "vue-tsc": "^3.1.8"
+  }
+}

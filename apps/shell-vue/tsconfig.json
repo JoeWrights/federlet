@@ -1,0 +1,6 @@
+{
+  "extends": "@federlet/tsconfig/vue.json",
+  "compilerOptions": {
+    "types": ["vue"]
+  }
+}

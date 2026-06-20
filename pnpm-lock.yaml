@@ -176,6 +176,9 @@ importers:
       '@federlet/mf-runtime':
         specifier: workspace:*
         version: link:../../packages/mf-runtime
+      '@federlet/react-shell':
+        specifier: workspace:*
+        version: link:../../packages/react-shell
       '@federlet/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -214,6 +217,43 @@ importers:
         specifier: workspace:*
         version: link:../../packages/webpack-config
 
+  apps/shell-vue:
+    dependencies:
+      '@federlet/mf-runtime':
+        specifier: workspace:*
+        version: link:../../packages/mf-runtime
+      '@federlet/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@federlet/vue-shell':
+        specifier: workspace:*
+        version: link:../../packages/vue-shell
+      vue:
+        specifier: ^3.5.25
+        version: 3.5.35(typescript@5.9.3)
+      vue-router:
+        specifier: ^4.6.3
+        version: 4.6.4(vue@3.5.35(typescript@5.9.3))
+    devDependencies:
+      '@federlet/rsbuild-config':
+        specifier: workspace:*
+        version: link:../../packages/rsbuild-config
+      '@federlet/rspack-config':
+        specifier: workspace:*
+        version: link:../../packages/rspack-config
+      '@federlet/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@federlet/vite-config':
+        specifier: workspace:*
+        version: link:../../packages/vite-config
+      '@federlet/webpack-config':
+        specifier: workspace:*
+        version: link:../../packages/webpack-config
+      vue-tsc:
+        specifier: ^3.1.8
+        version: 3.3.3(typescript@5.9.3)
+
   packages/mf-runtime:
     dependencies:
       '@federlet/shared-types':
@@ -222,10 +262,38 @@ importers:
       '@module-federation/enhanced':
         specifier: ^0.21.6
         version: 0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0)(postcss@8.5.15))
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
     devDependencies:
       '@federlet/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+
+  packages/react-shell:
+    dependencies:
+      '@federlet/mf-runtime':
+        specifier: workspace:*
+        version: link:../mf-runtime
+      '@federlet/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@federlet/shell-core':
+        specifier: workspace:*
+        version: link:../shell-core
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../style-isolation
+    devDependencies:
+      '@federlet/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      react:
+        specifier: ^19.2.1
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.1
+        version: 19.2.7(react@19.2.7)
 
   packages/rsbuild-config:
     dependencies:
@@ -307,6 +375,25 @@ importers:
         specifier: ^19.2.1
         version: 19.2.7(react@19.2.7)
 
+  packages/shell-core:
+    dependencies:
+      '@federlet/mf-runtime':
+        specifier: workspace:*
+        version: link:../mf-runtime
+      '@federlet/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../style-isolation
+    devDependencies:
+      '@federlet/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@18.19.130)(jsdom@24.1.3)(lightningcss@1.32.0)(terser@5.48.0)
+
   packages/style-isolation:
     dependencies:
       postcss:
@@ -347,6 +434,31 @@ importers:
         specifier: workspace:*
         version: link:../tsconfig
 
+  packages/vue-shell:
+    dependencies:
+      '@federlet/mf-runtime':
+        specifier: workspace:*
+        version: link:../mf-runtime
+      '@federlet/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@federlet/shell-core':
+        specifier: workspace:*
+        version: link:../shell-core
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../style-isolation
+      vue:
+        specifier: ^3.5.25
+        version: 3.5.35(typescript@5.9.3)
+    devDependencies:
+      '@federlet/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      vue-tsc:
+        specifier: ^3.1.8
+        version: 3.3.3(typescript@5.9.3)
+
   packages/webpack-config:
     dependencies:
       '@federlet/style-isolation':
@@ -354,22 +466,22 @@ importers:
         version: link:../style-isolation
       '@module-federation/enhanced':
         specifier: ^0.21.6
-        version: 0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.105.4)
+        version: 0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.105.4)
       '@swc/core':
         specifier: ^1.15.3
         version: 1.15.40(@swc/helpers@0.5.23)
       css-loader:
         specifier: ^7.1.2
-        version: 7.1.4(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(webpack@5.105.4)
+        version: 7.1.4(@rspack/core@2.0.6(@swc/helpers@0.5.23))(webpack@5.105.4)
       html-webpack-plugin:
         specifier: ^5.6.5
-        version: 5.6.7(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(webpack@5.105.4)
+        version: 5.6.7(@rspack/core@2.0.6(@swc/helpers@0.5.23))(webpack@5.105.4)
       postcss:
         specifier: ^8.5.15
         version: 8.5.15
       postcss-loader:
         specifier: ^8.2.1
-        version: 8.2.1(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(postcss@8.5.15)(typescript@5.9.3)(webpack@5.105.4)
+        version: 8.2.1(@rspack/core@2.0.6(@swc/helpers@0.5.23))(postcss@8.5.15)(typescript@5.9.3)(webpack@5.105.4)
       style-loader:
         specifier: ^4.0.0
         version: 4.0.0(webpack@5.105.4)
@@ -3632,6 +3744,9 @@ packages:
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
+  mitt@3.0.1:
+    resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
+
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
     engines: {node: '>=10'}
@@ -6063,35 +6178,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.105.4)':
-    dependencies:
-      '@module-federation/bridge-react-webpack-plugin': 0.21.6
-      '@module-federation/cli': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/data-prefetch': 0.21.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/error-codes': 0.21.6
-      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
-      '@module-federation/managers': 0.21.6
-      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/rspack': 0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/runtime-tools': 0.21.6
-      '@module-federation/sdk': 0.21.6
-      btoa: 1.2.1
-      schema-utils: 4.3.3
-      upath: 2.0.1
-    optionalDependencies:
-      typescript: 5.9.3
-      vue-tsc: 3.3.3(typescript@5.9.3)
-      webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
-    transitivePeerDependencies:
-      - '@rspack/core'
-      - bufferutil
-      - debug
-      - react
-      - react-dom
-      - supports-color
-      - utf-8-validate
-
   '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0)(postcss@8.5.15))':
     dependencies:
       '@module-federation/bridge-react-webpack-plugin': 0.21.6
@@ -6112,6 +6198,35 @@ snapshots:
       typescript: 5.9.3
       vue-tsc: 3.3.3(typescript@5.9.3)
       webpack: 5.107.2(lightningcss@1.32.0)(postcss@8.5.15)
+    transitivePeerDependencies:
+      - '@rspack/core'
+      - bufferutil
+      - debug
+      - react
+      - react-dom
+      - supports-color
+      - utf-8-validate
+
+  '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.105.4)':
+    dependencies:
+      '@module-federation/bridge-react-webpack-plugin': 0.21.6
+      '@module-federation/cli': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/data-prefetch': 0.21.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/error-codes': 0.21.6
+      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
+      '@module-federation/managers': 0.21.6
+      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/rspack': 0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/runtime-tools': 0.21.6
+      '@module-federation/sdk': 0.21.6
+      btoa: 1.2.1
+      schema-utils: 4.3.3
+      upath: 2.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+      vue-tsc: 3.3.3(typescript@5.9.3)
+      webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
     transitivePeerDependencies:
       - '@rspack/core'
       - bufferutil
@@ -6222,6 +6337,26 @@ snapshots:
       - utf-8-validate
 
   '@module-federation/rspack@0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))':
+    dependencies:
+      '@module-federation/bridge-react-webpack-plugin': 0.21.6
+      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
+      '@module-federation/managers': 0.21.6
+      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/runtime-tools': 0.21.6
+      '@module-federation/sdk': 0.21.6
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
+      btoa: 1.2.1
+    optionalDependencies:
+      typescript: 5.9.3
+      vue-tsc: 3.3.3(typescript@5.9.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - debug
+      - supports-color
+      - utf-8-validate
+
+  '@module-federation/rspack@0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))':
     dependencies:
       '@module-federation/bridge-react-webpack-plugin': 0.21.6
       '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
@@ -7072,7 +7207,7 @@ snapshots:
       '@umijs/deps': 3.5.43
       '@umijs/utils': 3.5.43
 
-  '@umijs/bundler-utils@3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@16.14.0))(react@16.14.0)':
+  '@umijs/bundler-utils@3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)':
     dependencies:
       '@umijs/babel-preset-umi': 3.5.43
       '@umijs/types': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)
@@ -7082,9 +7217,9 @@ snapshots:
       - react-dom
       - react-router
 
-  '@umijs/bundler-webpack@3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@16.14.0))(react@16.14.0)':
+  '@umijs/bundler-webpack@3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)':
     dependencies:
-      '@umijs/bundler-utils': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@16.14.0))(react@16.14.0)
+      '@umijs/bundler-utils': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)
       '@umijs/case-sensitive-paths-webpack-plugin': 1.0.1
       '@umijs/deps': 3.5.43
       '@umijs/types': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)
@@ -7128,7 +7263,7 @@ snapshots:
     dependencies:
       '@types/react-router-config': 5.0.2
       '@umijs/babel-preset-umi': 3.5.43
-      '@umijs/bundler-webpack': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@16.14.0))(react@16.14.0)
+      '@umijs/bundler-webpack': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)
       '@umijs/core': 3.5.43
       '@umijs/deps': 3.5.43
       '@umijs/renderer-mpa': 3.5.43(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
@@ -8102,7 +8237,7 @@ snapshots:
       '@rspack/core': 1.7.11(@swc/helpers@0.5.23)
       webpack: 5.107.2(lightningcss@1.32.0)(postcss@8.5.15)
 
-  css-loader@7.1.4(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(webpack@5.105.4):
+  css-loader@7.1.4(@rspack/core@2.0.6(@swc/helpers@0.5.23))(webpack@5.105.4):
     dependencies:
       icss-utils: 5.1.0(postcss@8.5.15)
       postcss: 8.5.15
@@ -8733,7 +8868,7 @@ snapshots:
       relateurl: 0.2.7
       terser: 5.48.0
 
-  html-webpack-plugin@5.6.7(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(webpack@5.105.4):
+  html-webpack-plugin@5.6.7(@rspack/core@2.0.6(@swc/helpers@0.5.23))(webpack@5.105.4):
     dependencies:
       '@types/html-minifier-terser': 6.1.0
       html-minifier-terser: 6.1.0
@@ -9257,6 +9392,8 @@ snapshots:
 
   minimist@1.2.8: {}
 
+  mitt@3.0.1: {}
+
   mrmime@2.0.1: {}
 
   ms@2.0.0: {}
@@ -9617,7 +9754,7 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  postcss-loader@8.2.1(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(postcss@8.5.15)(typescript@5.9.3)(webpack@5.105.4):
+  postcss-loader@8.2.1(@rspack/core@2.0.6(@swc/helpers@0.5.23))(postcss@8.5.15)(typescript@5.9.3)(webpack@5.105.4):
     dependencies:
       cosmiconfig: 9.0.2(typescript@5.9.3)
       jiti: 2.7.0
@@ -11197,7 +11334,7 @@ snapshots:
 
   umi@3.5.43(react-router@5.2.0(react@16.14.0)):
     dependencies:
-      '@umijs/bundler-webpack': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@16.14.0))(react@16.14.0)
+      '@umijs/bundler-webpack': 3.5.43(react-dom@16.14.0(react@16.14.0))(react-router@5.2.0(react@17.0.2))(react@16.14.0)
       '@umijs/core': 3.5.43
       '@umijs/deps': 3.5.43
       '@umijs/preset-built-in': 3.5.43(react-dom@16.14.0(react@16.14.0))(react@16.14.0)

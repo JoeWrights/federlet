@@ -13,8 +13,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@federlet/shared-types": "workspace:*",
     "@module-federation/enhanced": "^0.21.6",
-    "@federlet/shared-types": "workspace:*"
+    "mitt": "^3.0.1"
   },
   "devDependencies": {
     "@federlet/tsconfig": "workspace:*"

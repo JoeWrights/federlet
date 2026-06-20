@@ -385,6 +385,29 @@ pnpm lint
 - 可忽略。
 - 后续如果需要干净控制台，可以在 Shell 和 remote 的 `index.html` 中补 favicon。
 
+### 8. 动态 remote 注册完成前不要提前挂载 remote
+
+现象：
+
+- 进入 `http://localhost:3000/vue/` 后强刷新，Shell 页面显示 remote 加载失败。
+- 控制台可能出现：
+  `Failed to mount remote vue-analytics`。
+- Rspack dev overlay 可能进一步显示：
+  `Cannot read properties of null (reading 'nextSibling')`。
+- 报错栈里可能指向 `http://localhost:3002/remoteEntry.js`，但实际触发点是 dev overlay 捕获到运行时异常，不一定是 Vue 业务代码本身。
+
+原因：
+
+- Shell 启动时先拿到 fallback routes，因此 React Router 会立即匹配 `/vue/*`。
+- 动态 manifest 注册 remoteEntry 发生在 `loadRuntimeRemoteRoutes()` 中，是异步过程。
+- 如果 `RemoteAppBoundary` 在 `registerRemotes(...)` 完成前就开始加载 `remote_vue`，会出现 remote 尚未稳定注册就被加载的竞态。
+
+解决：
+
+- Shell 可以先用 fallback routes 渲染首页卡片和侧边导航，但不要立即挂载 remote 路由。
+- 等 `loadRuntimeRemoteRoutes()` 完成并注册 remoteEntry 后，再生成 `/react/*`、`/vue/*`、`/umi/*` 等 remote `<Route>`。
+- 在 routes 未 ready 前，remote 子路径显示轻量加载态，例如 `Loading remote routes...`，避免提前触发 remote 加载。
+
 ## 阶段一验收状态
 
 当前阶段一应满足：

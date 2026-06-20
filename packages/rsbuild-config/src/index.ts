@@ -65,6 +65,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/mf-runtime/src/index.ts",
     ),
+    "@federlet/react-shell": path.resolve(
+      root,
+      "packages/react-shell/src/index.tsx",
+    ),
     "@federlet/shared-ui": path.resolve(
       root,
       "packages/shared-ui/src/index.ts",
@@ -72,6 +76,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
     "@federlet/style-isolation": path.resolve(
       root,
       "packages/style-isolation/src/index.ts",
+    ),
+    "@federlet/vue-shell": path.resolve(
+      root,
+      "packages/vue-shell/src/index.ts",
     ),
   };
 }
@@ -197,6 +205,30 @@ export function createReactHostConfig(options: HostConfigOptions): RsbuildConfig
         name: options.name,
         remotes: options.remotes,
         shared: reactShared(),
+        dts: false,
+        manifest: false,
+      }),
+    ],
+  });
+}
+
+export function createVueHostConfig(options: HostConfigOptions): RsbuildConfig {
+  const config = createBaseConfig(
+    {
+      ...options,
+      entry: options.entry ?? "src/main.ts",
+    },
+    "vue",
+  );
+
+  return defineConfig({
+    ...config,
+    plugins: [
+      ...(config.plugins ?? []),
+      pluginModuleFederation({
+        name: options.name,
+        remotes: options.remotes,
+        shared: vueShared(),
         dts: false,
         manifest: false,
       }),

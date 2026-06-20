@@ -93,6 +93,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/mf-runtime/src/index.ts",
     ),
+    "@federlet/react-shell": path.resolve(
+      root,
+      "packages/react-shell/src/index.tsx",
+    ),
     "@federlet/shared-ui": path.resolve(
       root,
       "packages/shared-ui/src/index.ts",
@@ -100,6 +104,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
     "@federlet/style-isolation": path.resolve(
       root,
       "packages/style-isolation/src/index.ts",
+    ),
+    "@federlet/vue-shell": path.resolve(
+      root,
+      "packages/vue-shell/src/index.ts",
     ),
   };
 }
@@ -299,6 +307,29 @@ export function createReactHostConfig(options: HostConfigOptions): UserConfig {
         name: options.name,
         remotes: viteRemotes(options.remotes),
         shared: reactShared(),
+        dts: false,
+        manifest: false,
+      }),
+    ],
+  });
+}
+
+/**
+ * 创建 Vue Host 配置
+ * @param options Host 配置选项
+ * @returns Vue Host 配置
+ */
+export function createVueHostConfig(options: HostConfigOptions): UserConfig {
+  const config = createBaseConfig(options, "vue");
+
+  return defineConfig({
+    ...config,
+    plugins: [
+      ...(config.plugins ?? []),
+      federation({
+        name: options.name,
+        remotes: viteRemotes(options.remotes),
+        shared: vueShared(),
         dts: false,
         manifest: false,
       }),
