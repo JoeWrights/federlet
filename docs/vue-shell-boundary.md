@@ -24,6 +24,12 @@ import { RemoteAppBoundary } from "@federlet/vue-shell";
 - 开发环境报告 remote DOM 逃逸。
 - 保留 Loading、Error 和 Retry 默认 UI。
 
+## 公共能力
+
+`@federlet/vue-shell` 的框架无关工具由 `@federlet/shell-core` 提供，包括 `DEFAULT_REMOTE_LOAD_OPTIONS`、`createRemotePreloader()`、`createRemoteErrorMessage()`、`createRemoteErrorDetails()`、`formatRemoteErrorDetails()`、`reportRemoteDomEscapes()` 和 `scheduleRemoteUnmount()`。
+
+为了兼容已有调用方，这些工具仍然可以继续从 `@federlet/vue-shell` 导入；新的跨框架代码可以直接依赖 `@federlet/shell-core`。
+
 ## Vue runtime 隔离
 
 当 Vue Shell 承载一个完整的 Vue remote 应用时，不要把 `vue` 作为 Module Federation singleton shared 依赖共享。Vue remote 应该被当作独立应用挂载到 `RemoteAppBoundary` 创建的容器里，而不是复用 Shell 的 Vue runtime。

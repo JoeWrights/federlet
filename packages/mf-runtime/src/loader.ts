@@ -82,8 +82,17 @@ export class RemoteLoadError extends Error {
  * 远程应用重试选项。
  */
 export interface RemoteRetryOptions {
+  /**
+   * 最大重试次数。
+   */
   maxAttempts?: number;
+  /**
+   * 回退基础时间。
+   */
   backoffBaseMs?: number;
+  /**
+   * 延迟函数。
+   */
   delay?: (ms: number) => Promise<void>;
 }
 
@@ -91,8 +100,17 @@ export interface RemoteRetryOptions {
  * 远程应用加载选项。
  */
 export interface RemoteLoadOptions {
+  /**
+   * 远程应用熔断选项。
+   */
   circuitBreaker?: RemoteCircuitBreakerOptions | false;
+  /**
+   * 远程应用加载超时时间。
+   */
   timeoutMs?: number;
+  /**
+   * 远程应用重试选项。
+   */
   retry?: RemoteRetryOptions | false;
 }
 
@@ -105,8 +123,17 @@ export type RemoteCircuitStatus = "closed" | "open";
  * 远程应用熔断快照。
  */
 export interface RemoteCircuitSnapshot {
+  /**
+   * 失败次数。
+   */
   failureCount: number;
+  /**
+   * 打开时间。
+   */
   openedAt?: number;
+  /**
+   * 熔断状态。
+   */
   status: RemoteCircuitStatus;
 }
 
@@ -114,9 +141,29 @@ export interface RemoteCircuitSnapshot {
  * 远程应用熔断器存储。
  */
 export interface RemoteCircuitBreakerStore {
+  /**
+   * 是否可尝试远程应用加载。
+   * @param remoteName - 远程应用名称。
+   * @param cooldownMs - 冷却时间。
+   * @returns 是否可尝试远程应用加载。
+   */
   canAttempt(remoteName: string, cooldownMs: number): boolean;
+  /**
+   * 获取远程应用熔断器快照。
+   * @param remoteName - 远程应用名称。
+   * @returns 远程应用熔断器快照。
+   */
   getSnapshot(remoteName: string): RemoteCircuitSnapshot;
+  /**
+   * 记录远程应用加载失败。
+   * @param remoteName - 远程应用名称。
+   * @param failureThreshold - 失败阈值。
+   */
   recordFailure(remoteName: string, failureThreshold: number): void;
+  /**
+   * 记录远程应用加载成功。
+   * @param remoteName - 远程应用名称。
+   */
   recordSuccess(remoteName: string): void;
 }
 
@@ -124,8 +171,17 @@ export interface RemoteCircuitBreakerStore {
  * 远程应用熔断器选项。
  */
 export interface RemoteCircuitBreakerOptions {
+  /**
+   * 冷却时间。
+   */
   cooldownMs?: number;
+  /**
+   * 失败阈值。
+   */
   failureThreshold?: number;
+  /**
+   * 熔断器存储。
+   */
   store?: RemoteCircuitBreakerStore;
 }
 

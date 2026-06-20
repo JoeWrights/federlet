@@ -47,6 +47,8 @@ flowchart TD
 
 ## Shell 行为
 
+错误详情、默认错误文案、加载选项合并、预加载器、DOM 逃逸报告、remote 容器类名和延迟卸载等框架无关能力位于 `@federlet/shell-core`。`@federlet/react-shell` 和 `@federlet/vue-shell` 只保留各自框架的 hook/composable 与组件渲染层，并继续兼容导出这些公共工具，已有从 shell 包导入工具的调用方无需立即迁移。
+
 `packages/react-shell/src/index.tsx` 中的 `useRemoteAppMount` 会把 Shell 的错误处理器合并进 mount context：
 
 - remote 调用 `context.onError(error)` 后，`RemoteAppBoundary` 将当前 remote 状态切换为 `error`。

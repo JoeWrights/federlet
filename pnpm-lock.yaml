@@ -278,6 +278,9 @@ importers:
       '@federlet/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@federlet/shell-core':
+        specifier: workspace:*
+        version: link:../shell-core
       '@federlet/style-isolation':
         specifier: workspace:*
         version: link:../style-isolation
@@ -372,6 +375,25 @@ importers:
         specifier: ^19.2.1
         version: 19.2.7(react@19.2.7)
 
+  packages/shell-core:
+    dependencies:
+      '@federlet/mf-runtime':
+        specifier: workspace:*
+        version: link:../mf-runtime
+      '@federlet/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../style-isolation
+    devDependencies:
+      '@federlet/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@18.19.130)(jsdom@24.1.3)(lightningcss@1.32.0)(terser@5.48.0)
+
   packages/style-isolation:
     dependencies:
       postcss:
@@ -420,6 +442,9 @@ importers:
       '@federlet/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      '@federlet/shell-core':
+        specifier: workspace:*
+        version: link:../shell-core
       '@federlet/style-isolation':
         specifier: workspace:*
         version: link:../style-isolation

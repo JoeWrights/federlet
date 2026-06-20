@@ -23,6 +23,12 @@ import { RemoteAppBoundary } from "@federlet/react-shell";
 - 开发环境报告 remote DOM 逃逸。
 - 保留 Loading、Error 和 Retry 默认 UI。
 
+## 公共能力
+
+`@federlet/react-shell` 的框架无关工具由 `@federlet/shell-core` 提供，包括 `DEFAULT_REMOTE_LOAD_OPTIONS`、`createRemotePreloader()`、`createRemoteErrorMessage()`、`createRemoteErrorDetails()`、`formatRemoteErrorDetails()`、`reportRemoteDomEscapes()` 和 `scheduleRemoteUnmount()`。
+
+为了兼容已有调用方，这些工具仍然可以继续从 `@federlet/react-shell` 导入；新的跨框架代码可以直接依赖 `@federlet/shell-core`。
+
 ## 自定义加载策略
 
 业务可以通过 `loadOptions` 覆盖默认策略：
