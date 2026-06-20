@@ -215,47 +215,53 @@ flowchart TD
 
 ## 4) Remote 注册中心（名称、入口、版本、路由、状态集中维护）
 
-### 目标与当前问题
+### 当前状态
 
-- 目标：引入统一 registry 作为运行时单一事实来源（SSOT）。
-- 问题：当前路由、加载、状态分散在多个组件与配置中。
+已在 `@federlet/mf-runtime` 中实现 `RuntimeRemoteRegistry`，作为 remote 元数据与运行时 health 状态的单一事实来源。React/Vue Shell 的 manifest 加载逻辑已改为调用 `bootstrapRuntimeRemoteRegistry()`，Apollo manifest 仍负责声明 remote 名称、入口、路由、协议兼容性和 `status`，registry 负责保存启动后的可查询状态。
 
 ### 方案设计
 
 - 建立 `RuntimeRemoteRegistry`：
   - `registerMany(definitions)`
-  - `getByRoute(pathname)`
   - `getByName(remoteName)`
-  - `updateHealth(remoteName, status, reason)`
+  - `getByRouteId(routeId)`
+  - `listRoutes()`
+  - `updateHealth(remoteName, patch)`
 - registry 内记录：
   - 路由元信息
-  - 当前健康状态
-  - 最近失败时间/次数
-  - 预加载与缓存策略
+  - remoteEntry 地址
+  - `meta`
+  - 注册状态
+  - 当前加载健康状态
+  - 最近错误和更新时间
 
 ### 与现有代码衔接点
 
-- `apps/shell-react/src/remote-routes.ts` 由“配置源”转为“fallback seed”。
-- `RemoteAppBoundary` 改为从 registry 获取当前 route 的 runtime 定义。
+- `apps/shell-react/src/remote-routes.ts`、`apps/shell-vue/src/remote-routes.ts` 作为 fallback seed 保留。
+- `apps/shell-react/src/runtime-manifest.ts`、`apps/shell-vue/src/runtime-manifest.ts` 作为薄封装保留原 API，内部委托 `@federlet/mf-runtime`。
+- `packages/mf-runtime/src/loader.ts` 在 remote 加载成功、失败或熔断打开时回写 registry health。
 
 ### 分阶段落地步骤
 
-- MVP：只支持静态初始化 + 按 `remoteName` 查询。
+- 已完成：静态初始化、manifest -> registry 构建、按 `remoteName`/route id 查询、route 列表输出、loader health 回写。
 - 增强：支持运行时热更新、状态订阅与调试面板输出。
 
 ### 失败场景与降级策略
 
-- registry 初始化失败：拒绝动态能力并回退静态加载。
+- manifest 缺失或非法：registry 注册 fallback routes，Shell 继续使用静态路由。
+- remote 动态注册失败：registry 将相关 remote 标记为 `registrationStatus: "failed"` 并保留错误。
 
 ### 验收标准
 
 - Shell 内所有 remote 元数据都可通过 registry 查询。
-- 业务代码不再直接读取散落配置。
+- manifest 转换、协议过滤、remoteEntry 注册入口由 `@federlet/mf-runtime` 统一提供。
+- loader 可把加载成功、失败和熔断状态回写到 registry。
 
 ### 建议测试
 
-- 单测：增删改查与状态更新逻辑。
-- 集成：manifest -> registry 构建链路。
+- `packages/mf-runtime/src/remote-registry.test.ts`：registry 注册、查询、health 更新、manifest bootstrap 和 fallback。
+- `packages/mf-runtime/src/loader-resilience.test.ts`：loader 成功/失败时回写 registry health。
+- `apps/shell-react/src/runtime-manifest.test.ts`：Shell manifest loader 兼容原 API。
 
 ---
 

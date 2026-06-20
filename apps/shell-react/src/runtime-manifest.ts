@@ -1,10 +1,12 @@
-import { registerRuntimeRemoteEntries } from "@federlet/mf-runtime";
+import {
+  bootstrapRuntimeRemoteRegistry,
+  createRemoteDefinitionsFromManifest,
+  registerRuntimeRemoteEntries,
+} from "@federlet/mf-runtime";
 import type {
   FederletRuntimeEnvironment,
   RemoteRouteConfig,
   RuntimeRemoteManifest,
-  RuntimeRemoteManifestItem,
-  RuntimeRemoteRouteConfig,
 } from "@federlet/shared-types";
 import { SHELL_REMOTE_PROTOCOL_VERSION } from "./config/constants";
 
@@ -45,93 +47,7 @@ function getRuntimeEnvironment(): FederletRuntimeEnvironment {
 /**
  * 校验值是否为对象。
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-/**
- * 校验 manifest 中的 remote 是否有效。
- */
-function isManifestRemote(value: unknown): value is RuntimeRemoteManifestItem {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.id === "string" &&
-    typeof value.path === "string" &&
-    typeof value.title === "string" &&
-    typeof value.remoteName === "string" &&
-    (value.exposedModule === undefined ||
-      typeof value.exposedModule === "string") &&
-    typeof value.basename === "string" &&
-    (typeof value.entry === "string" ||
-      typeof value.entryBaseUrl === "string") &&
-    (value.supportedShellProtocolVersions === undefined ||
-      (Array.isArray(value.supportedShellProtocolVersions) &&
-        value.supportedShellProtocolVersions.every(
-          (version) => typeof version === "string",
-        ))) &&
-    (value.status === undefined ||
-      value.status === "active" ||
-      value.status === "disabled")
-  );
-}
-
-/**
- * 校验 runtime remote manifest 是否有效。
- */
-function isRuntimeRemoteManifest(value: unknown): value is RuntimeRemoteManifest {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    Array.isArray(value.remotes) &&
-    value.remotes.every(isManifestRemote)
-  );
-}
-
-/**
- * 将 manifest 中的 remote 转换为 runtime 路由配置。
- * @param remote - manifest 中的 remote。
- * @returns runtime 路由配置。
- */
-function toRuntimeRoute(remote: RuntimeRemoteManifestItem): RuntimeRemoteRouteConfig {
-  return {
-    basename: remote.basename,
-    entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl),
-    exposedModule: remote.exposedModule ?? DEFAULT_REMOTE_EXPOSED_MODULE,
-    id: remote.id,
-    path: remote.path,
-    remoteName: remote.remoteName,
-    title: remote.title,
-  };
-}
-
-/**
- * 创建 remote entry 的 URL。
- * @param entryBaseUrl - remote entry 的 base URL。
- * @returns remote entry 的 URL。
- */
-function createRemoteEntryUrl(entryBaseUrl: string | undefined) {
-  if (!entryBaseUrl) {
-    throw new Error("Remote manifest item is missing entryBaseUrl.");
-  }
-
-  const normalizedBaseUrl = entryBaseUrl.endsWith("/")
-    ? entryBaseUrl
-    : `${entryBaseUrl}/`;
-
-  return `${normalizedBaseUrl}remoteEntry.js`;
-}
-
-/**
- * 将 runtime 路由配置转换为 remote 路由配置。
- * @param route - runtime 路由配置。
- * @returns remote 路由配置。
- */
-function toRemoteRoute(route: RuntimeRemoteRouteConfig): RemoteRouteConfig {
+function toRemoteRoute(route: RemoteRouteConfig): RemoteRouteConfig {
   return {
     basename: route.basename,
     exposedModule: route.exposedModule,
@@ -142,66 +58,13 @@ function toRemoteRoute(route: RuntimeRemoteRouteConfig): RemoteRouteConfig {
   };
 }
 
-function isRemoteCompatibleWithShell(remote: RuntimeRemoteManifestItem) {
-  return (
-    remote.supportedShellProtocolVersions === undefined ||
-    remote.supportedShellProtocolVersions.includes(SHELL_REMOTE_PROTOCOL_VERSION)
-  );
-}
-
-function reportIncompatibleRemote(remote: RuntimeRemoteManifestItem) {
-  console.error("Remote protocol is incompatible with Shell", {
-    remoteName: remote.remoteName,
-    shellProtocolVersion: SHELL_REMOTE_PROTOCOL_VERSION,
-    supportedShellProtocolVersions: remote.supportedShellProtocolVersions,
-  });
-}
-
-function getCompatibleManifestRemotes(manifest: RuntimeRemoteManifest) {
-  return manifest.remotes.filter((remote) => {
-    if (remote.status === "disabled") {
-      return false;
-    }
-
-    if (!isRemoteCompatibleWithShell(remote)) {
-      reportIncompatibleRemote(remote);
-      return false;
-    }
-
-    return true;
-  });
-}
-
 export function createRemoteRoutesFromManifest(
   manifest: RuntimeRemoteManifest,
 ): RemoteRouteConfig[] {
-  return getCompatibleManifestRemotes(manifest)
-    .map((remote) => toRuntimeRoute(remote))
-    .map(toRemoteRoute);
-}
-
-/**
- * 注册 manifest 中的 remote 路由。
- * @param manifest - manifest。
- * @param registerRemoteEntries - 注册远程入口的函数。
- * @returns runtime 路由配置。
- */
-function registerManifestRoutes(
-  manifest: RuntimeRemoteManifest,
-  registerRemoteEntries: typeof registerRuntimeRemoteEntries,
-) {
-  const runtimeRoutes = getCompatibleManifestRemotes(manifest).map((remote) =>
-    toRuntimeRoute(remote),
-  );
-
-  registerRemoteEntries(
-    runtimeRoutes.map((route) => ({
-      entry: route.entry,
-      remoteName: route.remoteName,
-    })),
-  );
-
-  return runtimeRoutes.map(toRemoteRoute);
+  return createRemoteDefinitionsFromManifest(
+    manifest,
+    SHELL_REMOTE_PROTOCOL_VERSION,
+  ).map(toRemoteRoute);
 }
 
 /**
@@ -214,20 +77,11 @@ export async function loadRuntimeRemoteRoutes({
   registerRemoteEntries = registerRuntimeRemoteEntries,
   runtimeEnv = getRuntimeEnvironment(),
 }: LoadRuntimeRemoteRoutesOptions): Promise<RemoteRouteConfig[]> {
-  if (runtimeEnv.manifest) {
-    if (!isRuntimeRemoteManifest(runtimeEnv.manifest)) {
-      console.error("Injected runtime remote manifest is invalid", {
-        runtimeEnv: runtimeEnv.runtimeEnv,
-      });
-
-      return fallbackRoutes;
-    }
-
-    return registerManifestRoutes(
-      runtimeEnv.manifest,
-      registerRemoteEntries,
-    );
-  }
-
-  return fallbackRoutes;
+  return bootstrapRuntimeRemoteRegistry({
+    fallbackRoutes,
+    manifest: runtimeEnv.manifest,
+    registerRemoteEntries,
+    runtimeEnv: runtimeEnv.runtimeEnv,
+    shellProtocolVersion: SHELL_REMOTE_PROTOCOL_VERSION,
+  });
 }

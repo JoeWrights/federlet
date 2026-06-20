@@ -57,7 +57,7 @@
 - [x] 动态 remote manifest：Shell 不再写死 remoteEntry URL。
 - [ ] 环境化 remote 地址（部分完成）：当前由 Apollo 集群隔离环境配置，Shell 本地维护默认 Apollo 配置注入。
 - [x] remote 版本治理：声明 Shell 与 remote 的协议版本兼容关系。
-- [ ] remote 注册中心（部分完成）：Apollo manifest 已集中维护 remote 名称、入口、路由和状态，尚未实现运行时 registry 状态管理。
+- [x] remote 注册中心：Apollo manifest 集中维护 remote 名称、入口、路由和状态，`@federlet/mf-runtime` 提供运行时 registry 统一管理 remote 元数据与 health 状态。
 - [x] remote 加载超时控制。
 - [x] remote 加载失败重试策略。
 - [x] remote 熔断和降级策略。

@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  createRuntimeRemoteRegistry,
   createCircuitBreakerStore,
   mountRemoteApp,
   preloadRemoteApp,
@@ -20,6 +21,64 @@ const route: RemoteRouteConfig = {
 };
 
 describe("mountRemoteApp resilience", () => {
+  it("updates registry health after successful and failed loads", async () => {
+    const registry = createRuntimeRemoteRegistry(() => 1000);
+    registry.registerMany([route]);
+    const unmount = vi.fn();
+    const mount = vi.fn(() => ({ unmount }));
+    const loader = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("remote down"))
+      .mockResolvedValueOnce({ mount });
+    const options = {
+      registry,
+      retry: {
+        maxAttempts: 1,
+      },
+    };
+
+    await expect(
+      mountRemoteApp(
+        route,
+        {
+          basename: route.basename,
+          container: document.createElement("div"),
+        },
+        loader,
+        options,
+      ),
+    ).rejects.toMatchObject({
+      code: RemoteLoadErrorCode.LoadFailed,
+    });
+    expect(registry.getByName("remote_demo")).toMatchObject({
+      health: {
+        lastError: expect.any(RemoteLoadError),
+        loadHealth: "unavailable",
+        registrationStatus: "registered",
+        updatedAt: 1000,
+      },
+    });
+
+    await mountRemoteApp(
+      route,
+      {
+        basename: route.basename,
+        container: document.createElement("div"),
+      },
+      loader,
+      options,
+    );
+
+    expect(registry.getByName("remote_demo")).toMatchObject({
+      health: {
+        lastError: undefined,
+        loadHealth: "healthy",
+        registrationStatus: "registered",
+        updatedAt: 1000,
+      },
+    });
+  });
+
   it("throws a timeout error when loading exceeds the timeout", async () => {
     vi.useFakeTimers();
     const loader = vi.fn(() => new Promise<never>(() => undefined));

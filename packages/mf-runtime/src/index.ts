@@ -30,3 +30,17 @@ export {
   registerRuntimeRemoteEntries,
   type RuntimeRemoteEntry,
 } from "./runtime-remotes";
+export {
+  bootstrapRuntimeRemoteRegistry,
+  createRemoteDefinitionsFromManifest,
+  createRuntimeRemoteRegistry,
+  runtimeRemoteRegistry,
+  type BootstrapRuntimeRemoteRegistryOptions,
+  type RuntimeRemoteDefinition,
+  type RuntimeRemoteHealth,
+  type RuntimeRemoteHealthPatch,
+  type RuntimeRemoteLoadHealth,
+  type RuntimeRemoteRecord,
+  type RuntimeRemoteRegistry,
+  type RuntimeRemoteRegistrationStatus,
+} from "./remote-registry";

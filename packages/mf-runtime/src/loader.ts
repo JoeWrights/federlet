@@ -5,6 +5,7 @@ import type {
   RemoteMountModule,
   RemoteRouteConfig,
 } from "@federlet/shared-types";
+import type { RuntimeRemoteRegistry } from "./remote-registry";
 
 /**
  * 远程模块加载器。
@@ -112,6 +113,10 @@ export interface RemoteLoadOptions {
    * 远程应用重试选项。
    */
   retry?: RemoteRetryOptions | false;
+  /**
+   * 运行时 remote 注册中心。
+   */
+  registry?: RuntimeRemoteRegistry;
 }
 
 /**
@@ -464,6 +469,18 @@ function resolveCircuitBreakerOptions(options: RemoteLoadOptions) {
   };
 }
 
+function updateRegistryLoadHealth(
+  registry: RuntimeRemoteRegistry | undefined,
+  route: RemoteRouteConfig,
+  loadHealth: "healthy" | "degraded" | "unavailable",
+  lastError?: unknown,
+) {
+  registry?.updateHealth(route.remoteName, {
+    lastError,
+    loadHealth,
+  });
+}
+
 async function loadRemoteMountModule(
   route: RemoteRouteConfig,
   loader: RemoteModuleLoader,
@@ -503,16 +520,19 @@ export async function preloadRemoteApp(
     resolveCircuitBreakerOptions(options);
 
   if (circuitStore && !circuitStore.canAttempt(route.remoteName, circuitCooldownMs)) {
-    throw createRemoteLoadError(
+    const error = createRemoteLoadError(
       RemoteLoadErrorCode.CircuitOpen,
       `Remote ${route.remoteName} is temporarily unavailable.`,
       route,
     );
+    updateRegistryLoadHealth(options.registry, route, "degraded", error);
+    throw error;
   }
 
   try {
     await loadRemoteMountModule(route, loader, options);
     circuitStore?.recordSuccess(route.remoteName);
+    updateRegistryLoadHealth(options.registry, route, "healthy");
   } catch (error) {
     const remoteError =
       error instanceof RemoteLoadError
@@ -525,6 +545,7 @@ export async function preloadRemoteApp(
           );
 
     circuitStore?.recordFailure(route.remoteName, circuitFailureThreshold);
+    updateRegistryLoadHealth(options.registry, route, "unavailable", remoteError);
     throw remoteError;
   }
 }
@@ -548,17 +569,20 @@ export async function mountRemoteApp(
     resolveCircuitBreakerOptions(options);
 
   if (circuitStore && !circuitStore.canAttempt(route.remoteName, circuitCooldownMs)) {
-    throw createRemoteLoadError(
+    const error = createRemoteLoadError(
       RemoteLoadErrorCode.CircuitOpen,
       `Remote ${route.remoteName} is temporarily unavailable.`,
       route,
     );
+    updateRegistryLoadHealth(options.registry, route, "degraded", error);
+    throw error;
   }
 
   try {
     const remoteModule = await loadRemoteMountModule(route, loader, options);
     const instance = await remoteModule.mount(context);
     circuitStore?.recordSuccess(route.remoteName);
+    updateRegistryLoadHealth(options.registry, route, "healthy");
     return instance;
   } catch (error) {
     const remoteError =
@@ -572,6 +596,7 @@ export async function mountRemoteApp(
           );
 
     circuitStore?.recordFailure(route.remoteName, circuitFailureThreshold);
+    updateRegistryLoadHealth(options.registry, route, "unavailable", remoteError);
     throw remoteError;
   }
 }
