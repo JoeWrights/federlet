@@ -36,8 +36,8 @@ export interface BaseAppConfigOptions {
   /** 静态资源 publicPath，Shell 子路由刷新时通常需要显式传 `/`。 */
   publicPath?: string;
 
-  /** 追加或覆盖 Module Federation shared 依赖配置。 */
-  shared?: SharedConfig;
+  /** 追加或覆盖 Module Federation shared 依赖配置；传 false 可关闭默认 shared。 */
+  shared?: SharedConfig | false;
 
   /** 构建期 CSS selector 前缀化配置。Host 默认关闭，remote 默认开启。 */
   styleIsolation?: StyleIsolationConfig;
@@ -81,6 +81,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/mf-runtime/src/index.ts",
     ),
+    "@federlet/react-shell": path.resolve(
+      root,
+      "packages/react-shell/src/index.tsx",
+    ),
     "@federlet/shared-ui": path.resolve(
       root,
       "packages/shared-ui/src/index.ts",
@@ -88,6 +92,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
     "@federlet/style-isolation": path.resolve(
       root,
       "packages/style-isolation/src/index.ts",
+    ),
+    "@federlet/vue-shell": path.resolve(
+      root,
+      "packages/vue-shell/src/index.ts",
     ),
   };
 }
@@ -116,7 +124,14 @@ function vueShared(): SharedConfig {
   };
 }
 
-function mergeShared(defaultShared: SharedConfig, overrideShared?: SharedConfig) {
+function mergeShared(
+  defaultShared: SharedConfig,
+  overrideShared?: SharedConfig | false,
+) {
+  if (overrideShared === false) {
+    return {};
+  }
+
   return {
     ...defaultShared,
     ...(overrideShared ?? {}),
@@ -289,6 +304,32 @@ export function createReactHostConfig(options: HostConfigOptions): Configuration
       name: options.name,
       remotes: options.remotes,
       shared: mergeShared(reactShared(), options.shared),
+      dts: false,
+      manifest: false,
+    }),
+  ];
+
+  return config;
+}
+
+/**
+ * 创建 Vue Shell 的 Module Federation host 配置。
+ */
+export function createVueHostConfig(options: HostConfigOptions): Configuration {
+  const config = createBaseConfig(
+    {
+      ...options,
+      entry: options.entry ?? "src/main.ts",
+    },
+    "vue",
+  );
+
+  config.plugins = [
+    ...(config.plugins ?? []),
+    new ModuleFederationPlugin({
+      name: options.name,
+      remotes: options.remotes,
+      shared: mergeShared(vueShared(), options.shared),
       dts: false,
       manifest: false,
     }),

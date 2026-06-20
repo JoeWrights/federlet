@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@federlet/mf-runtime": "workspace:*",
+    "@federlet/react-shell": "workspace:*",
     "@federlet/shared-types": "workspace:*",
     "@federlet/style-isolation": "workspace:*",
     "@federlet/shared-ui": "workspace:*",

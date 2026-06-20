@@ -53,6 +53,7 @@ pnpm dev:vite
 ## 架构文档
 
 - [阶段一架构文档](docs/architecture-stage-1.md)
+- [跨应用事件总线规范化](docs/event-bus-governance.md)
 
 ## 微应用接入协议
 
@@ -70,6 +71,44 @@ export function mount(context: MicroAppContext): MicroAppInstance;
 - `eventBus`：可选跨应用事件总线。
 
 Remote 必须返回 `unmount()`，Shell 在路由离开或组件卸载时调用它清理资源。
+
+### 跨应用事件总线
+
+Shell 通过 `createEventBus()` 创建单例事件总线，并通过
+`MicroAppContext.eventBus` 注入给 remote。事件名采用
+`domain.topic.action` 三段式命名，例如 `remote.lifecycle.mounted` 和
+`auth.session.updated`。
+
+内置事件在 `FederletEventMap` 中声明 payload 类型；运行时可通过
+`validateFederletEventPayload` 或自定义 `validatePayload` 校验 payload。remote
+在 `mount()` 中订阅事件时必须保存 `eventBus.on()` 返回的 unsubscribe，并在
+`unmount()` 中调用它，避免路由切换后残留监听器。
+
+```ts
+const unsubscribe = context.eventBus?.on(
+  "auth.session.updated",
+  (payload, meta) => {
+    console.info("auth changed", payload, meta.traceId);
+  },
+);
+
+context.eventBus?.emit(
+  "remote.lifecycle.mounted",
+  {
+    basename: context.basename,
+    remoteName: "remote_react",
+  },
+  {
+    source: "remote_react",
+  },
+);
+
+return {
+  unmount() {
+    unsubscribe?.();
+  },
+};
+```
 
 ## 常用命令
 
@@ -138,6 +177,22 @@ Attempted to synchronously unmount a root while React was already rendering.
 只延迟卸载还不够。如果不同 remote route 复用了同一个 `RemoteAppBoundary` 实例和同一个 DOM container，新 remote 可能已经挂载完成，而旧 remote 的延迟 `unmount()` 又回来清理这个 container，导致 Vue/React DOM 操作出现 `nextSibling`、`insertBefore` 等异常。
 
 Shell 需要确保每个 remote route 使用独立的 Boundary 实例，例如给 `RemoteAppBoundary` 加 `key={route.id}`。这样旧 remote 的延迟卸载只会清理旧 container，不会误伤新 remote。
+
+### Vue Shell 强刷新 remote 子路由先闪首页
+
+Vue Shell 如果在 Vue Router 完成初始导航前就 `mount` 根应用，强刷新 `/react`、`/vue`、`/umi` 等 remote 子路由时，`useRoute()` 可能短暂拿到默认 `/`，导致 Shell 首页先渲染一次，然后才切到 remote。
+
+启动入口应先安装 router，再等待 `router.isReady()`，最后挂载应用：
+
+```ts
+const app = createApp(App);
+
+app.use(router);
+await router.isReady();
+app.mount("#root");
+```
+
+React Shell 没有这个现象，是因为 `BrowserRouter` 初次渲染会直接从当前 `window.location` 建立匹配状态；Vue Shell 需要显式等待初始导航 ready。
 
 ## 部署建议
 

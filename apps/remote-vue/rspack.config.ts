@@ -11,4 +11,5 @@ export default createVueRemoteConfig({
   exposes: {
     "./mount": "./src/mount.ts",
   },
+  shared: false,
 });
