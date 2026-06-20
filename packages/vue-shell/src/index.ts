@@ -57,11 +57,31 @@ export interface RemoteErrorMessageOverrides
 }
 
 /**
+ * remote 错误详情。
+ */
+export interface RemoteErrorDetails {
+  /** 错误代码。 */
+  code?: string;
+  /** 原始 cause 错误详情。 */
+  cause?: RemoteErrorDetails;
+  /** 错误消息。 */
+  message: string;
+  /** 错误名称。 */
+  name?: string;
+  /** remote 名称。 */
+  remoteName?: string;
+  /** 错误堆栈。 */
+  stack?: string;
+}
+
+/**
  * remote 应用边界渲染状态。
  */ 
 export interface RemoteAppBoundaryRenderState {
   /** 错误信息。 */
   error: unknown;
+  /** 错误详情。 */
+  errorDetails: RemoteErrorDetails;
   /** 错误消息。 */
   errorMessage: string;
   /** 重试函数。 */
@@ -116,6 +136,8 @@ export interface UseRemoteAppMountResult {
   containerRef: Ref<HTMLDivElement | null>;
   /** 错误信息。 */
   error: Ref<unknown>;
+  /** 错误详情。 */
+  errorDetails: Ref<RemoteErrorDetails>;
   /** 错误消息。 */
   errorMessage: Ref<string>;
   /** 重试函数。 */
@@ -225,6 +247,100 @@ function getRemoteLoadErrorCode(
   }
 
   return error.code as RemoteLoadErrorCode;
+}
+
+
+/**
+ * 获取字符串属性。
+ * @param error - 错误信息。
+ * @param property - 属性名称。
+ * @returns 属性值。
+ */
+function getStringProperty(error: object, property: string) {
+  if (!(property in error)) {
+    return undefined;
+  }
+
+  const value = error[property as keyof typeof error];
+
+  return typeof value === "string" ? value : undefined;
+}
+
+function getCause(error: object) {
+  if (!("cause" in error)) {
+    return undefined;
+  }
+
+  return error.cause;
+}
+
+/**
+ * 创建远程错误详情。
+ * @param error - 错误信息。
+ * @returns 可渲染的远程错误详情。
+ */
+export function createRemoteErrorDetails(error: unknown): RemoteErrorDetails {
+  if (error instanceof Error) {
+    const cause = getCause(error);
+
+    return {
+      cause: cause === undefined ? undefined : createRemoteErrorDetails(cause),
+      code: getStringProperty(error, "code"),
+      message: error.message,
+      name: error.name,
+      remoteName: getStringProperty(error, "remoteName"),
+      stack: error.stack,
+    };
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const cause = getCause(error);
+
+    return {
+      cause: cause === undefined ? undefined : createRemoteErrorDetails(cause),
+      code: getStringProperty(error, "code"),
+      message: getStringProperty(error, "message") ?? String(error),
+      name: getStringProperty(error, "name"),
+      remoteName: getStringProperty(error, "remoteName"),
+      stack: getStringProperty(error, "stack"),
+    };
+  }
+
+  return {
+    message: String(error),
+  };
+}
+
+/**
+ * 格式化远程错误详情。
+ * @param details - 远程错误详情。
+ * @returns 可直接渲染到 pre 的错误详情文本。
+ */
+export function formatRemoteErrorDetails(details: RemoteErrorDetails): string {
+  const lines: string[] = [];
+  const title = details.name
+    ? `${details.name}: ${details.message}`
+    : details.message;
+
+  lines.push(title);
+
+  if (details.code) {
+    lines.push(`Code: ${details.code}`);
+  }
+
+  if (details.remoteName) {
+    lines.push(`Remote: ${details.remoteName}`);
+  }
+
+  if (details.stack) {
+    lines.push("", "Stack:", details.stack);
+  }
+
+  if (details.cause) {
+    lines.push("", "Caused by:", formatRemoteErrorDetails(details.cause));
+  }
+
+  return lines.join("\n");
 }
 
 /**
@@ -557,6 +673,7 @@ export function useRemoteAppMount({
     containerHostRef,
     containerRef,
     error,
+    errorDetails: computed(() => createRemoteErrorDetails(error.value)),
     errorMessage: computed(() => createRemoteErrorMessage(error.value, messages)),
     retry,
     status,
@@ -602,6 +719,7 @@ export const RemoteAppBoundary = defineComponent({
     return () => {
       const renderState: RemoteAppBoundaryRenderState = {
         error: remote.error.value,
+        errorDetails: remote.errorDetails.value,
         errorMessage: remote.errorMessage.value,
         retry: remote.retry,
         route: props.route,
@@ -624,6 +742,13 @@ export const RemoteAppBoundary = defineComponent({
               { class: "remote-boundary__error", key: "error", role: "alert" },
               [
                 h("p", remote.errorMessage.value),
+                h("details", [
+                  h("summary", "Technical details"),
+                  h(
+                    "pre",
+                    formatRemoteErrorDetails(remote.errorDetails.value),
+                  ),
+                ]),
                 h("button", { type: "button", onClick: remote.retry }, "Retry"),
               ],
             )

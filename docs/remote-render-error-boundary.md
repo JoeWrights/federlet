@@ -50,7 +50,7 @@ flowchart TD
 `packages/react-shell/src/index.tsx` 中的 `useRemoteAppMount` 会把 Shell 的错误处理器合并进 mount context：
 
 - remote 调用 `context.onError(error)` 后，`RemoteAppBoundary` 将当前 remote 状态切换为 `error`。
-- 默认 fallback 展示 `Remote app is unavailable.`，业务也可以通过 `renderError` 自定义展示。
+- 默认 fallback 展示用户友好的 `errorMessage`，并在 `Technical details` 中展示完整错误链。业务也可以通过 `renderError` 自定义展示。
 - `onError(error, route)` 和 `onStatusChange("error", route)` 保留 route 上下文。
 - 已挂载的 remote 实例会被调度 `unmount()`，释放框架 root、事件订阅和副作用。
 - 点击 Retry 会通过现有 `retryKey` 重新执行加载和 mount。
@@ -62,6 +62,61 @@ onError(error: unknown) {
   console.error(`Remote runtime error from ${route.id}`, error);
 }
 ```
+
+## 错误详情展示
+
+默认 UI 会同时保留两层信息：
+
+- `errorMessage`：给用户看的稳定降级文案，例如 `Remote app failed during mount.`。
+- `errorDetails`：给开发者看的技术详情，递归展开 `name`、`message`、`code`、`remoteName`、`stack` 和 `cause`。
+
+`RemoteAppBoundaryRenderState` 会把 `errorDetails` 传给自定义 `renderError`：
+
+```ts
+export interface RemoteAppBoundaryRenderState {
+  error: unknown;
+  errorDetails: RemoteErrorDetails;
+  errorMessage: string;
+  retry: () => void;
+  route: RemoteRouteConfig;
+  status: RemoteAppStatus;
+}
+```
+
+React Shell 和 Vue Shell 的默认 fallback 都会渲染：
+
+```html
+<details>
+  <summary>Technical details</summary>
+  <pre>...</pre>
+</details>
+```
+
+如果 DevTools 中的错误是：
+
+```text
+RemoteLoadError: Remote remote_vue/mount failed during mount.
+Caused by: ReferenceError: b is not defined
+```
+
+UI 的 technical details 会同步展示为：
+
+```text
+RemoteLoadError: Remote remote_vue/mount failed during mount.
+Code: remote-mount-failed
+Remote: remote_vue
+
+Stack:
+...
+
+Caused by:
+ReferenceError: b is not defined
+
+Stack:
+...
+```
+
+这样既不会破坏普通用户的错误文案，也能让开发期 UI 与 DevTools 中的错误链保持一致。
 
 ## Remote 接入
 
@@ -138,7 +193,7 @@ console.log(a, "a");
 ## 降级策略
 
 - 加载或 mount 失败：展示对应错误文案，例如 `Remote app failed during mount.`。
-- remote 运行期异常：展示默认运行期错误文案或业务自定义 fallback。
+- remote 运行期异常：展示默认运行期错误文案、technical details 或业务自定义 fallback。
 - Retry：重新加载并 mount 当前 remote。
 - Unmount：进入运行期错误态时，Shell 会调度当前 remote 实例 `unmount()`，避免错误 root 和副作用残留。
 
@@ -147,6 +202,8 @@ console.log(a, "a");
 当前覆盖包括：
 
 - `packages/react-shell/src/RemoteAppBoundary.test.tsx`：remote 调用 `context.onError` 后展示 fallback、调用 Shell `onError`、切换 `error` 状态并卸载实例。
+- `packages/react-shell/src/RemoteAppBoundary.test.tsx`：默认错误 UI 展示 `RemoteLoadError` 和原始 `cause` 错误链。
+- `packages/vue-shell/src/RemoteAppBoundary.test.ts`：默认错误 UI 展示 `RemoteLoadError` 和原始 `cause` 错误链。
 - `apps/shell-react/src/App.test.tsx`：Shell 创建 mount context 时注入 `onError`。
 - `apps/remote-react/src/mount.runtime-error.test.tsx`：React 19 root error callbacks 转发到 `context.onError`。
 - `apps/remote-vue/src/mount.runtime-error.test.ts`：Vue `app.config.errorHandler` 转发运行期错误。
@@ -157,6 +214,7 @@ console.log(a, "a");
 
 ```bash
 pnpm --filter @federlet/react-shell test -- RemoteAppBoundary.test.tsx
+pnpm --filter @federlet/vue-shell test -- RemoteAppBoundary.test.ts
 pnpm --filter shell-react test -- App.test.tsx
 pnpm --filter remote-react test -- mount.runtime-error.test.tsx
 pnpm --filter remote-vue test -- mount.runtime-error.test.ts

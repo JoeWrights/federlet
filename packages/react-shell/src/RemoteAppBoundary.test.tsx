@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import {
   mountRemoteApp,
   preloadRemoteApp,
+  RemoteLoadError,
   RemoteLoadErrorCode,
 } from "@federlet/mf-runtime";
 import { createRemoteScopeClass } from "@federlet/style-isolation";
@@ -344,6 +345,33 @@ describe("RemoteAppBoundary", () => {
       "Remote app failed to load after retries.",
     );
     expect(document.querySelector("button")?.textContent).toBe("Retry");
+  });
+
+  it("renders technical details with the wrapped error cause chain", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const cause = new ReferenceError("a is not defined");
+    mockedMountRemoteApp.mockRejectedValue(
+      new RemoteLoadError({
+        cause,
+        code: RemoteLoadErrorCode.MountFailed,
+        message: "Remote remote_react/mount failed during mount.",
+        remoteName: "remote_react",
+      }),
+    );
+
+    await renderRemoteBoundary();
+
+    const details = document.querySelector("details");
+    const technicalDetails = document.querySelector("pre")?.textContent;
+
+    expect(details?.textContent).toContain("Technical details");
+    expect(technicalDetails).toContain(
+      "RemoteLoadError: Remote remote_react/mount failed during mount.",
+    );
+    expect(technicalDetails).toContain("Code: remote-mount-failed");
+    expect(technicalDetails).toContain("Remote: remote_react");
+    expect(technicalDetails).toContain("Caused by:");
+    expect(technicalDetails).toContain("ReferenceError: a is not defined");
   });
 
   it("shows a degraded message when the remote circuit is open", async () => {

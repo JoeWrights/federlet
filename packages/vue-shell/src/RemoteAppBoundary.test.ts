@@ -5,6 +5,7 @@ import { createApp, createCommentVNode, defineComponent, h, nextTick } from "vue
 import {
   mountRemoteApp,
   preloadRemoteApp,
+  RemoteLoadError,
   RemoteLoadErrorCode,
 } from "@federlet/mf-runtime";
 import { createRemoteScopeClass } from "@federlet/style-isolation";
@@ -353,5 +354,32 @@ describe("RemoteAppBoundary", () => {
         timeoutMs: 8000,
       }),
     );
+  });
+
+  it("renders technical details with the wrapped error cause chain", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const cause = new ReferenceError("b is not defined");
+    mockedMountRemoteApp.mockRejectedValue(
+      new RemoteLoadError({
+        cause,
+        code: RemoteLoadErrorCode.MountFailed,
+        message: "Remote remote_vue/mount failed during mount.",
+        remoteName: "remote_vue",
+      }),
+    );
+
+    await renderBoundary();
+
+    const details = document.querySelector("details");
+    const technicalDetails = document.querySelector("pre")?.textContent;
+
+    expect(details?.textContent).toContain("Technical details");
+    expect(technicalDetails).toContain(
+      "RemoteLoadError: Remote remote_vue/mount failed during mount.",
+    );
+    expect(technicalDetails).toContain("Code: remote-mount-failed");
+    expect(technicalDetails).toContain("Remote: remote_vue");
+    expect(technicalDetails).toContain("Caused by:");
+    expect(technicalDetails).toContain("ReferenceError: b is not defined");
   });
 });
