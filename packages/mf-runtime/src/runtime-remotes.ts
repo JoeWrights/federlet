@@ -1,8 +1,11 @@
 import { registerRemotes } from "@module-federation/enhanced/runtime";
+import type { RemoteEntryType } from "@federlet/shared-types";
 
 export interface RuntimeRemoteEntry {
   remoteName: string;
   entry: string;
+  remoteEntryType?: RemoteEntryType;
+  entryGlobalName?: string;
 }
 
 /**
@@ -19,6 +22,8 @@ export function registerRuntimeRemoteEntries(entries: RuntimeRemoteEntry[]) {
     entries.map((entry) => ({
       name: entry.remoteName,
       entry: entry.entry,
+      ...(entry.remoteEntryType ? { type: entry.remoteEntryType } : {}),
+      ...(entry.entryGlobalName ? { entryGlobalName: entry.entryGlobalName } : {}),
     })),
     { force: true },
   );

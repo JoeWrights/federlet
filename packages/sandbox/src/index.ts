@@ -3,6 +3,16 @@ import type {
   MicroAppInstance,
   RemoteRouteConfig,
 } from "@federlet/shared-types";
+import {
+  GLOBAL_HANDLER_KEYS,
+  WindowPatchManager,
+  type EventListenerTarget,
+  type GlobalHandlerPatch,
+  type RafId,
+  type SandboxRuntime,
+  type TimerId,
+} from "./window-patch-manager";
+import { WindowPropertySnapshotManager } from "./window-property-snapshot-manager";
 
 /**
  * 沙箱模式
@@ -163,21 +173,6 @@ export interface CreateSandboxedRemoteMountOptions {
 type SandboxWindow = Window & Record<string, unknown>;
 
 /**
- * 定时器 ID
- */
-type TimerId = number;
-
-/**
- * 请求动画帧 ID
- */
-type RafId = number;
-
-/**
- * 事件监听目标
- */
-type EventListenerTarget = EventListenerOrEventListenerObject;
-
-/**
  * 跟踪的事件监听
  */
 interface TrackedEventListener {
@@ -195,323 +190,8 @@ interface TrackedEventListener {
   type: string;
 }
 
-/**
- * 全局处理器补丁
- */
-interface GlobalHandlerPatch {
-  /**
-   * 当前值
-   */
-  current: unknown;
-  /**
-   * 描述符
-   */
-  descriptor?: PropertyDescriptor;
-  /**
-   * 是否存在
-   */
-  existed: boolean;
-}
-
-/**
- * 全局处理器键
- */
-const GLOBAL_HANDLER_KEYS = ["onerror", "onunhandledrejection"] as const;
-
-/**
- * 沙箱运行时
- */
-interface SandboxRuntime {
-  addEventListener(
-    type: string,
-    listener: EventListenerTarget,
-    options?: AddEventListenerOptions | boolean,
-  ): void;
-  cancelAnimationFrame(id: RafId): void;
-  clearInterval(id?: TimerId): void;
-  clearTimeout(id?: TimerId): void;
-  getGlobalHandler(key: (typeof GLOBAL_HANDLER_KEYS)[number]): unknown;
-  removeEventListener(
-    type: string,
-    listener: EventListenerTarget,
-    options?: EventListenerOptions | boolean,
-  ): void;
-  requestAnimationFrame(callback: FrameRequestCallback): RafId;
-  setGlobalHandler(
-    key: (typeof GLOBAL_HANDLER_KEYS)[number],
-    value: unknown,
-  ): boolean;
-  setInterval(handler: TimerHandler, timeout?: number, ...args: unknown[]): TimerId;
-  setTimeout(handler: TimerHandler, timeout?: number, ...args: unknown[]): TimerId;
-}
-
-/**
- * 原生窗口方法
- */
-interface NativeWindowMethods {
-  addEventListener: typeof window.addEventListener;
-  cancelAnimationFrame: typeof window.cancelAnimationFrame;
-  clearInterval: typeof window.clearInterval;
-  clearTimeout: typeof window.clearTimeout;
-  removeEventListener: typeof window.removeEventListener;
-  requestAnimationFrame: typeof window.requestAnimationFrame;
-  setInterval: typeof window.setInterval;
-  setTimeout: typeof window.setTimeout;
-}
-
-/**
- * 窗口补丁管理器
- */
-const windowPatchManager = (() => {
-  const activeRuntimes: SandboxRuntime[] = [];
-  let globalHandlerPatches: Map<
-    (typeof GLOBAL_HANDLER_KEYS)[number],
-    GlobalHandlerPatch
-  > | undefined;
-  let installed = false;
-  let nativeMethods: NativeWindowMethods | undefined;
-
-  function getNativeMethods() {
-    if (!nativeMethods) {
-      nativeMethods = {
-        addEventListener: window.addEventListener,
-        cancelAnimationFrame: window.cancelAnimationFrame,
-        clearInterval: window.clearInterval,
-        clearTimeout: window.clearTimeout,
-        removeEventListener: window.removeEventListener,
-        requestAnimationFrame: window.requestAnimationFrame,
-        setInterval: window.setInterval,
-        setTimeout: window.setTimeout,
-      };
-    }
-
-    return nativeMethods;
-  }
-
-  function getCurrentRuntime() {
-    return activeRuntimes.at(-1);
-  }
-
-  function patchWindow() {
-    if (installed) {
-      return;
-    }
-
-    const native = getNativeMethods();
-    globalHandlerPatches = new Map();
-
-    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-      const runtime = getCurrentRuntime();
-
-      if (runtime) {
-        return runtime.setTimeout(handler, timeout, ...args);
-      }
-
-      return native.setTimeout.apply(window, [
-        handler,
-        timeout,
-        ...args,
-      ] as unknown as Parameters<typeof window.setTimeout>) as unknown as TimerId;
-    }) as typeof window.setTimeout;
-    window.clearTimeout = ((id?: TimerId) => {
-      activeRuntimes.forEach((runtime) => runtime.clearTimeout(id));
-
-      return native.clearTimeout.call(window, id);
-    }) as typeof window.clearTimeout;
-    window.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-      const runtime = getCurrentRuntime();
-
-      if (runtime) {
-        return runtime.setInterval(handler, timeout, ...args);
-      }
-
-      return native.setInterval.apply(window, [
-        handler,
-        timeout,
-        ...args,
-      ] as unknown as Parameters<typeof window.setInterval>) as unknown as TimerId;
-    }) as typeof window.setInterval;
-    window.clearInterval = ((id?: TimerId) => {
-      activeRuntimes.forEach((runtime) => runtime.clearInterval(id));
-
-      return native.clearInterval.call(window, id);
-    }) as typeof window.clearInterval;
-    window.requestAnimationFrame = (callback: FrameRequestCallback) => {
-      const runtime = getCurrentRuntime();
-
-      if (runtime) {
-        return runtime.requestAnimationFrame(callback);
-      }
-
-      return native.requestAnimationFrame
-        ? native.requestAnimationFrame.call(window, callback)
-        : Number(native.setTimeout.call(window, () => callback(performance.now()), 16));
-    };
-    window.cancelAnimationFrame = (id: RafId) => {
-      activeRuntimes.forEach((runtime) => runtime.cancelAnimationFrame(id));
-
-      if (native.cancelAnimationFrame) {
-        native.cancelAnimationFrame.call(window, id);
-      } else {
-        native.clearTimeout.call(window, id);
-      }
-    };
-    window.addEventListener = ((
-      type: string,
-      listener: EventListenerTarget,
-      options?: AddEventListenerOptions | boolean,
-    ) => {
-      const runtime = getCurrentRuntime();
-
-      if (runtime) {
-        return runtime.addEventListener(type, listener, options);
-      }
-
-      return native.addEventListener.call(window, type, listener, options);
-    }) as typeof window.addEventListener;
-    window.removeEventListener = ((
-      type: string,
-      listener: EventListenerTarget,
-      options?: EventListenerOptions | boolean,
-    ) => {
-      activeRuntimes.forEach((runtime) =>
-        runtime.removeEventListener(type, listener, options),
-      );
-
-      return native.removeEventListener.call(window, type, listener, options);
-    }) as typeof window.removeEventListener;
-
-    for (const key of GLOBAL_HANDLER_KEYS) {
-      const descriptor = Object.getOwnPropertyDescriptor(window, key);
-      const patch: GlobalHandlerPatch = {
-        current: window[key],
-        descriptor,
-        existed: Boolean(descriptor),
-      };
-      globalHandlerPatches.set(key, patch);
-
-      Object.defineProperty(window, key, {
-        configurable: true,
-        enumerable: descriptor?.enumerable ?? true,
-        get() {
-          return getCurrentRuntime()?.getGlobalHandler(key) ?? patch.current;
-        },
-        set(value) {
-          if (!getCurrentRuntime()?.setGlobalHandler(key, value)) {
-            patch.current = value;
-          }
-        },
-      });
-    }
-
-    installed = true;
-  }
-
-  function restoreWindow() {
-    if (!installed || !nativeMethods) {
-      return;
-    }
-
-    window.setTimeout = nativeMethods.setTimeout;
-    window.clearTimeout = nativeMethods.clearTimeout;
-    window.setInterval = nativeMethods.setInterval;
-    window.clearInterval = nativeMethods.clearInterval;
-    window.requestAnimationFrame = nativeMethods.requestAnimationFrame;
-    window.cancelAnimationFrame = nativeMethods.cancelAnimationFrame;
-    window.addEventListener = nativeMethods.addEventListener;
-    window.removeEventListener = nativeMethods.removeEventListener;
-
-    globalHandlerPatches?.forEach((patch, key) => {
-      if (patch.existed && patch.descriptor) {
-        Object.defineProperty(window, key, patch.descriptor);
-      } else {
-        delete (window as unknown as SandboxWindow)[key];
-      }
-    });
-    globalHandlerPatches = undefined;
-    installed = false;
-    nativeMethods = undefined;
-  }
-
-  return {
-    addRuntime(runtime: SandboxRuntime) {
-      patchWindow();
-
-      if (!activeRuntimes.includes(runtime)) {
-        activeRuntimes.push(runtime);
-      }
-    },
-    nativeAddEventListener(
-      type: string,
-      listener: EventListenerTarget,
-      options?: AddEventListenerOptions | boolean,
-    ) {
-      return getNativeMethods().addEventListener.call(window, type, listener, options);
-    },
-    nativeCancelAnimationFrame(id: RafId) {
-      const native = getNativeMethods();
-
-      if (native.cancelAnimationFrame) {
-        native.cancelAnimationFrame.call(window, id);
-      } else {
-        native.clearTimeout.call(window, id);
-      }
-    },
-    nativeClearInterval(id?: TimerId) {
-      return getNativeMethods().clearInterval.call(window, id);
-    },
-    nativeClearTimeout(id?: TimerId) {
-      return getNativeMethods().clearTimeout.call(window, id);
-    },
-    nativeRemoveEventListener(
-      type: string,
-      listener: EventListenerTarget,
-      options?: EventListenerOptions | boolean,
-    ) {
-      return getNativeMethods().removeEventListener.call(window, type, listener, options);
-    },
-    nativeRequestAnimationFrame(callback: FrameRequestCallback) {
-      const native = getNativeMethods();
-
-      return native.requestAnimationFrame
-        ? native.requestAnimationFrame.call(window, callback)
-        : Number(native.setTimeout.call(window, () => callback(performance.now()), 16));
-    },
-    nativeSetInterval(
-      handler: TimerHandler,
-      timeout?: number,
-      ...args: unknown[]
-    ): TimerId {
-      return getNativeMethods().setInterval.apply(window, [
-        handler,
-        timeout,
-        ...args,
-      ] as unknown as Parameters<typeof window.setInterval>) as unknown as TimerId;
-    },
-    nativeSetTimeout(
-      handler: TimerHandler,
-      timeout?: number,
-      ...args: unknown[]
-    ): TimerId {
-      return getNativeMethods().setTimeout.apply(window, [
-        handler,
-        timeout,
-        ...args,
-      ] as unknown as Parameters<typeof window.setTimeout>) as unknown as TimerId;
-    },
-    removeRuntime(runtime: SandboxRuntime) {
-      const index = activeRuntimes.indexOf(runtime);
-
-      if (index >= 0) {
-        activeRuntimes.splice(index, 1);
-      }
-
-      if (activeRuntimes.length === 0) {
-        restoreWindow();
-      }
-    },
-  };
-})();
+const windowPatchManager = new WindowPatchManager();
+const windowPropertySnapshotManager = new WindowPropertySnapshotManager();
 
 /**
  * 获取事件捕获
@@ -855,6 +535,7 @@ export function createFederletSandbox({
       }
 
       active = true;
+      windowPropertySnapshotManager.capture();
       windowPatchManager.addRuntime(runtime);
     },
     deactivate() {
@@ -893,6 +574,7 @@ export function createFederletSandbox({
         patch.current = null;
       });
       windowPatchManager.removeRuntime(runtime);
+      windowPropertySnapshotManager.release();
       active = false;
     },
     getDiagnostics() {

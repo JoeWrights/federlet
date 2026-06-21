@@ -62,6 +62,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vite:
+        specifier: ^5.4.21
+        version: 5.4.21(@types/node@18.19.130)(lightningcss@1.32.0)(terser@5.48.0)
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@18.19.130)(jsdom@24.1.3)(lightningcss@1.32.0)(terser@5.48.0)
@@ -261,7 +264,7 @@ importers:
         version: link:../shared-types
       '@module-federation/enhanced':
         specifier: ^0.21.6
-        version: 0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0))
+        version: 0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0))
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -6226,6 +6229,35 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0))':
+    dependencies:
+      '@module-federation/bridge-react-webpack-plugin': 0.21.6
+      '@module-federation/cli': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/data-prefetch': 0.21.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/error-codes': 0.21.6
+      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
+      '@module-federation/managers': 0.21.6
+      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/rspack': 0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/runtime-tools': 0.21.6
+      '@module-federation/sdk': 0.21.6
+      btoa: 1.2.1
+      schema-utils: 4.3.3
+      upath: 2.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+      vue-tsc: 3.3.3(typescript@5.9.3)
+      webpack: 5.107.2(lightningcss@1.32.0)
+    transitivePeerDependencies:
+      - '@rspack/core'
+      - bufferutil
+      - debug
+      - react
+      - react-dom
+      - supports-color
+      - utf-8-validate
+
   '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.105.4)':
     dependencies:
       '@module-federation/bridge-react-webpack-plugin': 0.21.6
@@ -6246,35 +6278,6 @@ snapshots:
       typescript: 5.9.3
       vue-tsc: 3.3.3(typescript@5.9.3)
       webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
-    transitivePeerDependencies:
-      - '@rspack/core'
-      - bufferutil
-      - debug
-      - react
-      - react-dom
-      - supports-color
-      - utf-8-validate
-
-  '@module-federation/enhanced@0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))(webpack@5.107.2(lightningcss@1.32.0))':
-    dependencies:
-      '@module-federation/bridge-react-webpack-plugin': 0.21.6
-      '@module-federation/cli': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/data-prefetch': 0.21.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/error-codes': 0.21.6
-      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
-      '@module-federation/managers': 0.21.6
-      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/rspack': 0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
-      '@module-federation/runtime-tools': 0.21.6
-      '@module-federation/sdk': 0.21.6
-      btoa: 1.2.1
-      schema-utils: 4.3.3
-      upath: 2.0.1
-    optionalDependencies:
-      typescript: 5.9.3
-      vue-tsc: 3.3.3(typescript@5.9.3)
-      webpack: 5.107.2(lightningcss@1.32.0)
     transitivePeerDependencies:
       - '@rspack/core'
       - bufferutil
@@ -6426,6 +6429,26 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@module-federation/rspack@0.21.6(@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))':
+    dependencies:
+      '@module-federation/bridge-react-webpack-plugin': 0.21.6
+      '@module-federation/dts-plugin': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/inject-external-runtime-core-plugin': 0.21.6(@module-federation/runtime-tools@0.21.6)
+      '@module-federation/managers': 0.21.6
+      '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
+      '@module-federation/runtime-tools': 0.21.6
+      '@module-federation/sdk': 0.21.6
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
+      btoa: 1.2.1
+    optionalDependencies:
+      typescript: 5.9.3
+      vue-tsc: 3.3.3(typescript@5.9.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - debug
+      - supports-color
+      - utf-8-validate
+
   '@module-federation/rspack@0.21.6(@rspack/core@2.0.6(@swc/helpers@0.5.23))(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))':
     dependencies:
       '@module-federation/bridge-react-webpack-plugin': 0.21.6
@@ -6435,7 +6458,7 @@ snapshots:
       '@module-federation/manifest': 0.21.6(typescript@5.9.3)(vue-tsc@3.3.3(typescript@5.9.3))
       '@module-federation/runtime-tools': 0.21.6
       '@module-federation/sdk': 0.21.6
-      '@rspack/core': 2.0.6(@swc/helpers@0.5.23)
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
       btoa: 1.2.1
     optionalDependencies:
       typescript: 5.9.3
@@ -6901,10 +6924,11 @@ snapshots:
     optionalDependencies:
       '@swc/helpers': 0.5.23
 
-  '@rspack/core@2.0.6(@swc/helpers@0.5.23)':
+  '@rspack/core@2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)':
     dependencies:
       '@rspack/binding': 2.0.6
     optionalDependencies:
+      '@module-federation/runtime-tools': 0.21.6
       '@swc/helpers': 0.5.23
 
   '@rspack/dev-server@1.1.5(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@types/express@4.17.25)(tslib@2.8.1)(webpack@5.107.2(lightningcss@1.32.0))':
@@ -8331,7 +8355,7 @@ snapshots:
       postcss-value-parser: 4.2.0
       semver: 7.8.2
     optionalDependencies:
-      '@rspack/core': 2.0.6(@swc/helpers@0.5.23)
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
       webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
 
   css-prefers-color-scheme@3.1.1:
@@ -8959,7 +8983,7 @@ snapshots:
       pretty-error: 4.0.0
       tapable: 2.3.3
     optionalDependencies:
-      '@rspack/core': 2.0.6(@swc/helpers@0.5.23)
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
       webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
 
   htmlparser2@6.1.0:
@@ -9844,7 +9868,7 @@ snapshots:
       postcss: 8.5.15
       semver: 7.8.2
     optionalDependencies:
-      '@rspack/core': 2.0.6(@swc/helpers@0.5.23)
+      '@rspack/core': 2.0.6(@module-federation/runtime-tools@0.21.6)(@swc/helpers@0.5.23)
       webpack: 5.105.4(@swc/core@1.15.40(@swc/helpers@0.5.23))(lightningcss@1.32.0)(postcss@8.5.15)(webpack-cli@6.0.1)
     transitivePeerDependencies:
       - typescript

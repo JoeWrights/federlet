@@ -1,5 +1,6 @@
 import { registerRuntimeRemoteEntries } from "./runtime-remotes";
 import type {
+  RemoteEntryType,
   RemoteRouteConfig,
   RuntimeRemoteManifest,
   RuntimeRemoteManifestItem,
@@ -51,6 +52,14 @@ export interface RuntimeRemoteDefinition extends RemoteRouteConfig {
    * 远程入口。
    */
   entry?: string;
+  /**
+   * 远程入口加载格式。
+   */
+  remoteEntryType?: RemoteEntryType;
+  /**
+   * var remote 挂载到全局对象上的名称。
+   */
+  entryGlobalName?: string;
   /**
    * 元数据。
    */
@@ -302,6 +311,11 @@ function isManifestRemote(value: unknown): value is RuntimeRemoteManifestItem {
     typeof value.basename === "string" &&
     (typeof value.entry === "string" ||
       typeof value.entryBaseUrl === "string") &&
+    (value.remoteEntryType === undefined ||
+      value.remoteEntryType === "module" ||
+      value.remoteEntryType === "var") &&
+    (value.entryGlobalName === undefined ||
+      typeof value.entryGlobalName === "string") &&
     (value.supportedShellProtocolVersions === undefined ||
       (Array.isArray(value.supportedShellProtocolVersions) &&
         value.supportedShellProtocolVersions.every(
@@ -412,10 +426,12 @@ export function createRemoteDefinitionsFromManifest(
     (remote) => ({
       basename: remote.basename,
       entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl),
+      entryGlobalName: remote.entryGlobalName,
       exposedModule: remote.exposedModule ?? DEFAULT_REMOTE_EXPOSED_MODULE,
       id: remote.id,
       meta: remote.meta,
       path: remote.path,
+      remoteEntryType: remote.remoteEntryType,
       remoteName: remote.remoteName,
       title: remote.title,
     }),
@@ -462,6 +478,8 @@ export async function bootstrapRuntimeRemoteRegistry({
         .filter((definition) => definition.entry)
         .map((definition) => ({
           entry: definition.entry as string,
+          entryGlobalName: definition.entryGlobalName,
+          remoteEntryType: definition.remoteEntryType,
           remoteName: definition.remoteName,
         })),
     );

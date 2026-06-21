@@ -29,10 +29,23 @@ const manifest: RuntimeRemoteManifest = {
         owner: "platform",
       },
       path: "/react/*",
+      remoteEntryType: "module",
       remoteName: "remote_react",
       status: "active",
       supportedShellProtocolVersions: ["1"],
       title: "React Remote",
+    },
+    {
+      basename: "/umi",
+      entryBaseUrl: "http://localhost:3003",
+      entryGlobalName: "remote_umi_react",
+      id: "umi-react",
+      path: "/umi/*",
+      remoteEntryType: "var",
+      remoteName: "remote_umi_react",
+      status: "active",
+      supportedShellProtocolVersions: ["1"],
+      title: "Umi React Remote",
     },
     {
       basename: "/disabled",
@@ -148,7 +161,14 @@ describe("bootstrapRuntimeRemoteRegistry", () => {
     expect(registerRemoteEntries).toHaveBeenCalledWith([
       {
         entry: "http://localhost:3001/remoteEntry.js",
+        remoteEntryType: "module",
         remoteName: "remote_react",
+      },
+      {
+        entry: "http://localhost:3003/remoteEntry.js",
+        entryGlobalName: "remote_umi_react",
+        remoteEntryType: "var",
+        remoteName: "remote_umi_react",
       },
     ]);
     expect(routes).toEqual([
@@ -160,6 +180,14 @@ describe("bootstrapRuntimeRemoteRegistry", () => {
         remoteName: "remote_react",
         title: "React Remote",
       },
+      {
+        basename: "/umi",
+        exposedModule: "./mount",
+        id: "umi-react",
+        path: "/umi/*",
+        remoteName: "remote_umi_react",
+        title: "Umi React Remote",
+      },
     ]);
     expect(registry.getByName("remote_react")).toMatchObject({
       entry: "http://localhost:3001/remoteEntry.js",
@@ -169,6 +197,11 @@ describe("bootstrapRuntimeRemoteRegistry", () => {
       meta: {
         owner: "platform",
       },
+    });
+    expect(registry.getByName("remote_umi_react")).toMatchObject({
+      entry: "http://localhost:3003/remoteEntry.js",
+      entryGlobalName: "remote_umi_react",
+      remoteEntryType: "var",
     });
     expect(registry.getByName("remote_disabled")).toBeUndefined();
     expect(registry.getByName("remote_legacy")).toBeUndefined();

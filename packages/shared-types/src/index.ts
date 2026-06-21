@@ -153,6 +153,11 @@ export interface FederletRuntimeEnvironment {
 }
 
 /**
+ * remoteEntry 的运行时加载格式。
+ */
+export type RemoteEntryType = "module" | "var";
+
+/**
  * manifest 中声明的单个 remote。
  */
 export interface RuntimeRemoteManifestItem
@@ -165,6 +170,12 @@ export interface RuntimeRemoteManifestItem
 
   /** remote 站点根地址，运行时会拼接 remoteEntry 文件名和版本参数。 */
   entryBaseUrl?: string;
+
+  /** remoteEntry 的运行时加载格式；Vite remote 需要 `module`，webpack/Umi var remote 需要 `var`。 */
+  remoteEntryType?: RemoteEntryType;
+
+  /** var remote 挂载到全局对象上的名称。 */
+  entryGlobalName?: string;
 
   /** remote 声明兼容的 Shell 挂载协议版本。 */
   supportedShellProtocolVersions?: string[];
@@ -189,6 +200,12 @@ export interface RuntimeRemoteManifest {
 export interface RuntimeRemoteRouteConfig extends RemoteRouteConfig {
   /** 用于动态注册 Module Federation remote 的 remoteEntry 地址。 */
   entry: string;
+
+  /** remoteEntry 的运行时加载格式。 */
+  remoteEntryType?: RemoteEntryType;
+
+  /** var remote 挂载到全局对象上的名称。 */
+  entryGlobalName?: string;
 }
 
 /**

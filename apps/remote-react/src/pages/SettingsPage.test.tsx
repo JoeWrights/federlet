@@ -21,6 +21,7 @@ interface SandboxRiskWindow extends Window {
     seckillRemainingSeconds?: number;
     seckillIntervalId?: number;
   };
+  __FEDERLET_UNSANDBOXED_WINDOW_WRITE__?: string;
 }
 
 let root: Root | null = null;
@@ -79,10 +80,22 @@ afterEach(() => {
   });
   root = null;
   delete getRiskWindow().__FEDERLET_SANDBOX_RISK__;
+  delete getRiskWindow().__FEDERLET_UNSANDBOXED_WINDOW_WRITE__;
+  delete (Array.prototype as { __federletSandboxRisk__?: string })
+    .__federletSandboxRisk__;
   document.head
     .querySelector("[data-federlet-sandbox-risk='head-style']")
     ?.remove();
+  document.head
+    .querySelector("[data-federlet-sandbox-risk='head-link']")
+    ?.remove();
+  document.head
+    .querySelector("[data-federlet-sandbox-risk='head-script']")
+    ?.remove();
   document.body.replaceChildren();
+  localStorage.removeItem("federlet:sandbox-risk");
+  sessionStorage.removeItem("federlet:sandbox-risk");
+  document.cookie = "federlet_sandbox_risk=; Max-Age=0; path=/";
   document.title = "";
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -96,6 +109,11 @@ describe("SettingsPage sandbox risk lab", () => {
     expect(host.textContent).toContain("Pollute window");
     expect(host.textContent).toContain("Schedule timeout");
     expect(host.textContent).toContain("Schedule raf");
+    expect(host.textContent).toContain("Pollute direct window property");
+    expect(host.textContent).toContain("Inject dynamic link");
+    expect(host.textContent).toContain("Inject dynamic script");
+    expect(host.textContent).toContain("Write browser storage");
+    expect(host.textContent).toContain("Pollute Array prototype");
     expect(host.textContent).toContain("Inject runtime style");
   });
 
@@ -146,6 +164,39 @@ describe("SettingsPage sandbox risk lab", () => {
     expect(host.textContent).toContain("1");
     expect(host.textContent).toContain("timeout fired");
     expect(host.textContent).toContain("yes");
+  });
+
+  it("demonstrates blind spots the current sandbox cannot contain", () => {
+    const host = renderSettingsPage();
+
+    clickButton(host, "Pollute direct window property");
+    clickButton(host, "Inject dynamic link");
+    clickButton(host, "Inject dynamic script");
+    clickButton(host, "Write browser storage");
+    clickButton(host, "Pollute Array prototype");
+
+    expect(getRiskWindow().__FEDERLET_UNSANDBOXED_WINDOW_WRITE__).toBe(
+      "remote-react/settings",
+    );
+    expect(
+      document.head.querySelector("[data-federlet-sandbox-risk='head-link']"),
+    ).not.toBeNull();
+    expect(
+      document.head.querySelector("[data-federlet-sandbox-risk='head-script']"),
+    ).not.toBeNull();
+    expect(localStorage.getItem("federlet:sandbox-risk")).toBe(
+      "remote-react/settings",
+    );
+    expect(sessionStorage.getItem("federlet:sandbox-risk")).toBe(
+      "remote-react/settings",
+    );
+    expect(document.cookie).toContain("federlet_sandbox_risk=remote-react");
+    expect(
+      (Array.prototype as { __federletSandboxRisk__?: string })
+        .__federletSandboxRisk__,
+    ).toBe("remote-react/settings");
+    expect(host.textContent).toContain("direct window write");
+    expect(host.textContent).toContain("detected");
   });
 
   it("automatically runs a one-day seckill countdown through a global interval", () => {

@@ -16,29 +16,53 @@ import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
 interface FederletSandboxRiskState {
   clickCount?: number;
+  cookiePollution?: boolean;
+  directWindowWrite?: boolean;
+  dynamicLinkLeak?: boolean;
+  dynamicScriptLeak?: boolean;
   intervalId?: number;
+  prototypePollution?: boolean;
   rafFired?: boolean;
   seckillRemainingSeconds?: number;
   source?: string;
+  storagePollution?: boolean;
   timeoutFired?: boolean;
   ticks?: number;
 }
 
 interface SandboxRiskWindow extends Window {
   __FEDERLET_SANDBOX_RISK__?: FederletSandboxRiskState;
+  __FEDERLET_UNSANDBOXED_WINDOW_WRITE__?: string;
 }
 
 export interface SandboxRiskSnapshot {
   bodyNodeLeak: boolean;
   clickListenerCount: number;
+  cookiePollution: boolean;
+  directWindowWrite: boolean;
+  dynamicLinkLeak: boolean;
+  dynamicScriptLeak: boolean;
   globalPollution: boolean;
   leakingTimer: boolean;
+  prototypePollution: boolean;
   rafFired: boolean;
   runtimeStyleLeak: boolean;
   source?: string;
   seckillRemainingSeconds?: number;
+  storagePollution: boolean;
   timeoutFired: boolean;
   ticks: number;
+}
+
+function hasStoragePollution() {
+  try {
+    return (
+      localStorage.getItem("federlet:sandbox-risk") !== null ||
+      sessionStorage.getItem("federlet:sandbox-risk") !== null
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function readSandboxRiskSnapshot(): SandboxRiskSnapshot {
@@ -46,31 +70,61 @@ export function readSandboxRiskSnapshot(): SandboxRiskSnapshot {
     return {
       bodyNodeLeak: false,
       clickListenerCount: 0,
+      cookiePollution: false,
+      directWindowWrite: false,
+      dynamicLinkLeak: false,
+      dynamicScriptLeak: false,
       globalPollution: false,
       leakingTimer: false,
+      prototypePollution: false,
       rafFired: false,
       runtimeStyleLeak: false,
       seckillRemainingSeconds: undefined,
+      storagePollution: false,
       timeoutFired: false,
       ticks: 0,
     };
   }
 
-  const risk = (window as SandboxRiskWindow).__FEDERLET_SANDBOX_RISK__;
+  const riskWindow = window as SandboxRiskWindow;
+  const risk = riskWindow.__FEDERLET_SANDBOX_RISK__;
 
   return {
     bodyNodeLeak: Boolean(
       document.body.querySelector("[data-federlet-sandbox-risk='body-node']"),
     ),
     clickListenerCount: risk?.clickCount ?? 0,
+    cookiePollution:
+      Boolean(risk?.cookiePollution) ||
+      document.cookie.includes("federlet_sandbox_risk="),
+    directWindowWrite:
+      Boolean(risk?.directWindowWrite) ||
+      riskWindow.__FEDERLET_UNSANDBOXED_WINDOW_WRITE__ !== undefined,
+    dynamicLinkLeak:
+      Boolean(risk?.dynamicLinkLeak) ||
+      Boolean(
+        document.head.querySelector("[data-federlet-sandbox-risk='head-link']"),
+      ),
+    dynamicScriptLeak:
+      Boolean(risk?.dynamicScriptLeak) ||
+      Boolean(
+        document.head.querySelector(
+          "[data-federlet-sandbox-risk='head-script']",
+        ),
+      ),
     globalPollution: Boolean(risk),
     leakingTimer: risk?.intervalId !== undefined,
+    prototypePollution:
+      Boolean(risk?.prototypePollution) ||
+      (Array.prototype as { __federletSandboxRisk__?: string })
+        .__federletSandboxRisk__ !== undefined,
     rafFired: Boolean(risk?.rafFired),
     runtimeStyleLeak: Boolean(
       document.head.querySelector("[data-federlet-sandbox-risk='head-style']"),
     ),
     source: risk?.source,
     seckillRemainingSeconds: risk?.seckillRemainingSeconds,
+    storagePollution: Boolean(risk?.storagePollution) || hasStoragePollution(),
     timeoutFired: Boolean(risk?.timeoutFired),
     ticks: risk?.ticks ?? 0,
   };
@@ -105,11 +159,36 @@ function HomePage({
       "Sandbox should cancel on unmount",
     ],
     ["raf fired", snapshot.rafFired, "Sandbox should cancel on unmount"],
+    [
+      "direct window write",
+      snapshot.directWindowWrite,
+      "Snapshot restore should clean after the last sandbox unmounts",
+    ],
     ["body node", snapshot.bodyNodeLeak, "Boundary: DOM escape only detected"],
     [
       "runtime style",
       snapshot.runtimeStyleLeak,
       "Boundary: CSS escape only detected",
+    ],
+    [
+      "dynamic link",
+      snapshot.dynamicLinkLeak,
+      "Blind spot: head link nodes are not cleaned",
+    ],
+    [
+      "dynamic script",
+      snapshot.dynamicScriptLeak,
+      "Blind spot: head script nodes are not cleaned",
+    ],
+    [
+      "storage/cookie",
+      snapshot.storagePollution || snapshot.cookiePollution,
+      "Blind spot: persisted browser state is not rolled back",
+    ],
+    [
+      "prototype pollution",
+      snapshot.prototypePollution,
+      "Blind spot: prototype mutations are not reverted",
     ],
   ] as const;
 
@@ -145,6 +224,10 @@ function HomePage({
           `/react/settings` with `/react-nosandbox/settings`: sandbox-on should
           clean timers, raf, and window listeners after unmount; DOM and runtime
           style escapes remain visible because they are outside the JS sandbox.
+          Direct window writes are still visible while the remote is mounted,
+          but sandbox-on should restore them after the last sandbox unmounts.
+          Dynamic head nodes, browser storage/cookie, and prototype pollution
+          are still not rolled back.
         </p>
         {snapshot.source ? <small>Last source: {snapshot.source}</small> : null}
         <dl>

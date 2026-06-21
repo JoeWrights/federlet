@@ -10,4 +10,5 @@ describe("umiRemoteRoutes", () => {
     ]);
     expect(umiRemoteRoutes.every((route) => route.Component)).toBe(true);
   });
+
 });

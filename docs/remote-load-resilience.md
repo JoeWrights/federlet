@@ -25,6 +25,59 @@ Shell 加载 remote 的链路分为四段：
 
 其中 `remote-load-timeout` 和 `remote-load-failed` 默认可重试；协议错误、mount 错误、熔断错误不重试。
 
+## 踩坑：Vite remoteEntry 必须按 module remote 注册
+
+在 `pnpm dev:vite` 下，`shell-react` 动态加载 `remote-react` 或 `remote-vue` 时，如果控制台出现类似错误：
+
+```text
+Uncaught SyntaxError: Cannot use import statement outside a module
+RUNTIME-001: Failed to get remoteEntry exports
+RemoteEntryExports is undefined
+```
+
+优先检查 remote 注册信息是否携带了正确的 remoteEntry 加载格式。
+
+Vite 产出的 `remoteEntry.js` 是 ESM，文件顶部会包含顶层 `import`。如果动态注册时只传：
+
+```ts
+registerRemotes([
+  {
+    name: "remote_react",
+    entry: "http://localhost:3001/remoteEntry.js",
+  },
+]);
+```
+
+Module Federation runtime 会按默认 script/var remote 加载它，浏览器就会把 ESM 内容当普通脚本执行，最终表现为 remoteEntry 语法错误或 runtime 拿不到 remote exports。
+
+正确做法是在 Apollo manifest 中声明 remoteEntry 类型，并由 `@federlet/mf-runtime` 透传给 Module Federation runtime：
+
+```ts
+{
+  remoteName: "remote_react",
+  entryBaseUrl: "http://localhost:3001/",
+  remoteEntryType: "module",
+}
+```
+
+对于 Umi/Webpack var remote，则需要保留 var 加载格式和全局容器名：
+
+```ts
+{
+  remoteName: "remote_umi_react",
+  entryBaseUrl: "http://localhost:3003/",
+  remoteEntryType: "var",
+  entryGlobalName: "remote_umi_react",
+}
+```
+
+排查顺序建议：
+
+1. 直接访问 `http://localhost:<port>/remoteEntry.js`，确认响应是否是 ESM。若顶部有 `import ...`，必须按 `module` 注册。
+2. 检查 Shell 注入的 manifest，确认 Vite remote 带 `remoteEntryType: "module"`。
+3. 检查 `registerRuntimeRemoteEntries()` 是否把 `remoteEntryType` 转成 Module Federation runtime 的 `type` 字段。
+4. 对 Webpack/Umi remote，确认 `remoteEntryType: "var"` 和 `entryGlobalName` 与 Module Federation `name` 一致。
+
 ## 默认策略
 
 - 加载超时：`8000ms`。

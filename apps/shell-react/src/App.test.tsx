@@ -17,6 +17,7 @@ interface SandboxRiskTestWindow extends Window {
     timeoutFired?: boolean;
     ticks?: number;
   };
+  __FEDERLET_UNSANDBOXED_WINDOW_WRITE__?: string;
 }
 
 const remotePreloaderMocks = vi.hoisted(() => ({
@@ -333,6 +334,8 @@ describe("readSandboxRiskSnapshot", () => {
       timeoutFired: true,
       ticks: 3,
     };
+    (window as SandboxRiskTestWindow).__FEDERLET_UNSANDBOXED_WINDOW_WRITE__ =
+      "remote-react/settings";
     document.body.append(document.createElement("div"));
     document.body.lastElementChild?.setAttribute(
       "data-federlet-sandbox-risk",
@@ -341,22 +344,47 @@ describe("readSandboxRiskSnapshot", () => {
     const style = document.createElement("style");
     style.dataset.federletSandboxRisk = "head-style";
     document.head.append(style);
+    const link = document.createElement("link");
+    link.dataset.federletSandboxRisk = "head-link";
+    document.head.append(link);
+    const script = document.createElement("script");
+    script.dataset.federletSandboxRisk = "head-script";
+    document.head.append(script);
+    localStorage.setItem("federlet:sandbox-risk", "remote-react/settings");
+    sessionStorage.setItem("federlet:sandbox-risk", "remote-react/settings");
+    document.cookie = "federlet_sandbox_risk=remote-react; path=/";
+    (Array.prototype as { __federletSandboxRisk__?: string })
+      .__federletSandboxRisk__ = "remote-react/settings";
 
     expect(readSandboxRiskSnapshot()).toEqual({
       bodyNodeLeak: true,
       clickListenerCount: 2,
+      cookiePollution: true,
+      directWindowWrite: true,
+      dynamicLinkLeak: true,
+      dynamicScriptLeak: true,
       globalPollution: true,
       leakingTimer: true,
+      prototypePollution: true,
       rafFired: true,
       runtimeStyleLeak: true,
       seckillRemainingSeconds: 4,
       source: "remote-react/settings",
+      storagePollution: true,
       timeoutFired: true,
       ticks: 3,
     });
 
     delete (window as SandboxRiskTestWindow).__FEDERLET_SANDBOX_RISK__;
+    delete (window as SandboxRiskTestWindow).__FEDERLET_UNSANDBOXED_WINDOW_WRITE__;
+    delete (Array.prototype as { __federletSandboxRisk__?: string })
+      .__federletSandboxRisk__;
+    localStorage.removeItem("federlet:sandbox-risk");
+    sessionStorage.removeItem("federlet:sandbox-risk");
+    document.cookie = "federlet_sandbox_risk=; Max-Age=0; path=/";
     document.body.replaceChildren();
     style.remove();
+    link.remove();
+    script.remove();
   });
 });

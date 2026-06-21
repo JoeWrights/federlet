@@ -7,6 +7,14 @@ import {
 } from "./index";
 import type { MicroAppContext, RemoteRouteConfig } from "@federlet/shared-types";
 
+interface SandboxTestWindow extends Window {
+  __FEDERATION__?: Record<string, unknown>;
+  __FEDERLET_EXISTING_GLOBAL__?: string;
+  __FEDERLET_NEW_GLOBAL__?: string;
+  __REMOTE_GLOBAL__?: string;
+  webpackChunkremote_umi_react?: unknown[];
+}
+
 const route: RemoteRouteConfig = {
   basename: "/react",
   exposedModule: "./mount",
@@ -27,7 +35,11 @@ describe("createFederletSandbox", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    delete (window as Window & { __REMOTE_GLOBAL__?: string }).__REMOTE_GLOBAL__;
+    delete (window as SandboxTestWindow).__FEDERLET_EXISTING_GLOBAL__;
+    delete (window as SandboxTestWindow).__FEDERLET_NEW_GLOBAL__;
+    delete (window as SandboxTestWindow).__FEDERATION__;
+    delete (window as SandboxTestWindow).__REMOTE_GLOBAL__;
+    delete (window as SandboxTestWindow).webpackChunkremote_umi_react;
   });
 
   it("isolates remote window writes and reports global mutation diagnostics", () => {
@@ -60,6 +72,63 @@ describe("createFederletSandbox", () => {
       (window as Window & { __REMOTE_GLOBAL__?: string }).__REMOTE_GLOBAL__,
     ).toBeUndefined();
     expect(sandbox.globalThis.__REMOTE_GLOBAL__).toBeUndefined();
+  });
+
+  it("restores direct window property additions and mutations on deactivate", () => {
+    Object.defineProperty(window, "__FEDERLET_EXISTING_GLOBAL__", {
+      configurable: true,
+      enumerable: true,
+      value: "before mount",
+      writable: true,
+    });
+    const sandbox = createFederletSandbox({
+      container: document.createElement("div"),
+      remoteName: "remote_react",
+    });
+
+    sandbox.activate();
+    (window as SandboxTestWindow).__FEDERLET_EXISTING_GLOBAL__ = "during mount";
+    (window as SandboxTestWindow).__FEDERLET_NEW_GLOBAL__ = "created by remote";
+
+    expect((window as SandboxTestWindow).__FEDERLET_EXISTING_GLOBAL__).toBe(
+      "during mount",
+    );
+    expect((window as SandboxTestWindow).__FEDERLET_NEW_GLOBAL__).toBe(
+      "created by remote",
+    );
+
+    sandbox.deactivate();
+
+    expect((window as SandboxTestWindow).__FEDERLET_EXISTING_GLOBAL__).toBe(
+      "before mount",
+    );
+    expect(
+      Object.prototype.hasOwnProperty.call(window, "__FEDERLET_NEW_GLOBAL__"),
+    ).toBe(false);
+  });
+
+  it("does not remove platform runtime globals created while sandbox is active", () => {
+    const sandbox = createFederletSandbox({
+      container: document.createElement("div"),
+      remoteName: "remote_react",
+    });
+
+    sandbox.activate();
+    (window as SandboxTestWindow).__FEDERLET_NEW_GLOBAL__ = "created by remote";
+    (window as SandboxTestWindow).__FEDERATION__ = {
+      remotes: ["remote_umi_react"],
+    };
+    (window as SandboxTestWindow).webpackChunkremote_umi_react = [];
+
+    sandbox.deactivate();
+
+    expect(
+      Object.prototype.hasOwnProperty.call(window, "__FEDERLET_NEW_GLOBAL__"),
+    ).toBe(false);
+    expect((window as SandboxTestWindow).__FEDERATION__).toEqual({
+      remotes: ["remote_umi_react"],
+    });
+    expect((window as SandboxTestWindow).webpackChunkremote_umi_react).toEqual([]);
   });
 
   it("cleans timers, raf callbacks, listeners, and global handlers on deactivate", () => {

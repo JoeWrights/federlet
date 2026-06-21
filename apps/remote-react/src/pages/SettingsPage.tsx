@@ -2,9 +2,14 @@ import { useEffect, useState } from "react";
 
 interface FederletSandboxRiskState {
   clickCount?: number;
+  cookiePollution?: boolean;
+  directWindowWrite?: boolean;
+  dynamicLinkLeak?: boolean;
+  dynamicScriptLeak?: boolean;
   intervalId?: number;
   listenerRegistered?: boolean;
   onWindowClick?: EventListener;
+  prototypePollution?: boolean;
   rafFired?: boolean;
   rafId?: number;
   source?: string;
@@ -13,10 +18,12 @@ interface FederletSandboxRiskState {
   timeoutFired?: boolean;
   timeoutId?: number;
   ticks?: number;
+  storagePollution?: boolean;
 }
 
 interface SandboxRiskWindow extends Window {
   __FEDERLET_SANDBOX_RISK__?: FederletSandboxRiskState;
+  __FEDERLET_UNSANDBOXED_WINDOW_WRITE__?: string;
 }
 
 const RISK_SOURCE = "remote-react/settings";
@@ -48,6 +55,15 @@ function getRiskState() {
 function polluteWindowGlobal() {
   const risk = getRiskState();
   risk.clickCount ??= 0;
+}
+
+function polluteDirectWindowProperty() {
+  const riskWindow = window as SandboxRiskWindow;
+  const risk = getRiskState();
+
+  riskWindow.__FEDERLET_UNSANDBOXED_WINDOW_WRITE__ = RISK_SOURCE;
+  risk.directWindowWrite = true;
+  notifyRiskUpdated();
 }
 
 function startLeakingTimer() {
@@ -152,6 +168,60 @@ function injectRuntimeStyle() {
   document.head.append(style);
 }
 
+function injectDynamicLink() {
+  if (
+    document.head.querySelector("[data-federlet-sandbox-risk='head-link']")
+  ) {
+    return;
+  }
+
+  const risk = getRiskState();
+  const link = document.createElement("link");
+  link.dataset.federletSandboxRisk = "head-link";
+  link.href = "data:text/plain,federlet-sandbox-risk";
+  link.rel = "prefetch";
+  document.head.append(link);
+  risk.dynamicLinkLeak = true;
+  notifyRiskUpdated();
+}
+
+function injectDynamicScript() {
+  if (
+    document.head.querySelector("[data-federlet-sandbox-risk='head-script']")
+  ) {
+    return;
+  }
+
+  const risk = getRiskState();
+  const script = document.createElement("script");
+  script.dataset.federletSandboxRisk = "head-script";
+  script.type = "application/json";
+  script.textContent = JSON.stringify({ source: RISK_SOURCE });
+  document.head.append(script);
+  risk.dynamicScriptLeak = true;
+  notifyRiskUpdated();
+}
+
+function writeBrowserStorage() {
+  const risk = getRiskState();
+
+  localStorage.setItem("federlet:sandbox-risk", RISK_SOURCE);
+  sessionStorage.setItem("federlet:sandbox-risk", RISK_SOURCE);
+  document.cookie = "federlet_sandbox_risk=remote-react; path=/";
+  risk.cookiePollution = true;
+  risk.storagePollution = true;
+  notifyRiskUpdated();
+}
+
+function polluteArrayPrototype() {
+  const risk = getRiskState();
+
+  (Array.prototype as { __federletSandboxRisk__?: string })
+    .__federletSandboxRisk__ = RISK_SOURCE;
+  risk.prototypePollution = true;
+  notifyRiskUpdated();
+}
+
 export default function SettingsPage() {
   const [events, setEvents] = useState<string[]>([]);
   const [productSeckillRemainingSeconds, setProductSeckillRemainingSeconds] =
@@ -220,19 +290,39 @@ export default function SettingsPage() {
         <button onClick={() => run("raf leak", scheduleLeakingRaf)}>
           Schedule raf
         </button>
+        <button
+          onClick={() =>
+            run("direct window write", polluteDirectWindowProperty)
+          }
+        >
+          Pollute direct window property
+        </button>
         <button onClick={() => run("body node leak", appendBodyNode)}>
           Append body node
         </button>
         <button onClick={() => run("runtime style leak", injectRuntimeStyle)}>
           Inject runtime style
         </button>
+        <button onClick={() => run("dynamic link leak", injectDynamicLink)}>
+          Inject dynamic link
+        </button>
+        <button onClick={() => run("dynamic script leak", injectDynamicScript)}>
+          Inject dynamic script
+        </button>
+        <button onClick={() => run("storage pollution", writeBrowserStorage)}>
+          Write browser storage
+        </button>
+        <button onClick={() => run("prototype pollution", polluteArrayPrototype)}>
+          Pollute Array prototype
+        </button>
       </div>
 
       <p className="react-remote__risk-note">
         Compare `/react/settings` with `/react-nosandbox/settings`. The sandbox
         can clean timer, timeout, raf, and window listener side effects on
-        unmount. Direct DOM and runtime style writes are intentionally outside
-        the current JS sandbox boundary.
+        unmount. Direct window writes are snapshot-restored after the last
+        sandbox unmounts, but they are still visible while mounted. DOM/head
+        mutations, storage, cookie, and prototype changes remain blind spots.
       </p>
 
       <section className="react-remote__seckill-card">
@@ -270,6 +360,30 @@ export default function SettingsPage() {
         <div>
           <dt>listener registered</dt>
           <dd>{risk?.listenerRegistered ? "yes" : "no"}</dd>
+        </div>
+        <div>
+          <dt>direct window write</dt>
+          <dd>{risk?.directWindowWrite ? "detected" : "clean"}</dd>
+        </div>
+        <div>
+          <dt>dynamic link</dt>
+          <dd>{risk?.dynamicLinkLeak ? "detected" : "clean"}</dd>
+        </div>
+        <div>
+          <dt>dynamic script</dt>
+          <dd>{risk?.dynamicScriptLeak ? "detected" : "clean"}</dd>
+        </div>
+        <div>
+          <dt>storage/cookie</dt>
+          <dd>
+            {risk?.storagePollution || risk?.cookiePollution
+              ? "detected"
+              : "clean"}
+          </dd>
+        </div>
+        <div>
+          <dt>prototype pollution</dt>
+          <dd>{risk?.prototypePollution ? "detected" : "clean"}</dd>
         </div>
         <div>
           <dt>seckill countdown</dt>
