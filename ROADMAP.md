@@ -83,12 +83,13 @@
 
 ## 阶段五：开发者体验
 
-- [ ] 新建 remote 模板：React、Vue、Umi/legacy。
-- [ ] 接入脚手架 CLI：`create remote`、`register remote`。
+- [x] 新建 shell 模板：React、Vue。
+- [x] 新建 remote 模板：React、Vue、Umi/legacy。
+- [x] 接入脚手架 CLI：`create remote`、`register remote`。
 - [ ] 本地联调命令：只启动 Shell + 指定 remote。
 - [ ] remote 接入指南升级为标准 checklist。
 - [ ] 构建器选择指南：Rspack、Vite、Rsbuild、Webpack 适用场景。
-- [ ] 统一日志格式。
+- [x] 统一日志格式。
 - [ ] 本地调试面板：显示已注册 remote、加载状态、remoteEntry 地址。
 - [ ] 类型生成策略：评估 Module Federation DTS 或手写契约包。
 - [ ] 示例业务场景：dashboard、settings、reports 等跨 remote demo。

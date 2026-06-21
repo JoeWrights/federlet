@@ -9,6 +9,7 @@ import {
   watch,
 } from "vue";
 import {
+  federletLogger,
   mountRemoteApp,
 } from "@federlet/mf-runtime";
 import { createSandboxedRemoteMount } from "@federlet/sandbox";
@@ -224,10 +225,14 @@ export function useRemoteAppMount({
    * @param runtimeError - 运行时错误。
    */
   function handleRemoteRuntimeError(runtimeError: unknown) {
-    console.error(
-      `Remote ${route.remoteName} reported a runtime error`,
-      runtimeError,
-    );
+    federletLogger.error({
+      error: runtimeError,
+      event: "remote.runtime.error",
+      message: "Remote reported a runtime error",
+      remoteName: route.remoteName,
+      routeId: route.id,
+      scope: "vue-shell",
+    });
     onError?.(runtimeError, route);
 
     const instance = instanceRef.value;
@@ -320,7 +325,14 @@ export function useRemoteAppMount({
       instanceRef.value = instance;
       updateStatus("ready");
     } catch (mountError) {
-      console.error(`Failed to mount remote ${route.id}`, mountError);
+      federletLogger.error({
+        error: mountError,
+        event: "remote.mount.failed",
+        message: "Failed to mount remote",
+        remoteName: route.remoteName,
+        routeId: route.id,
+        scope: "vue-shell",
+      });
       onError?.(mountError, route);
       error.value = mountError;
       updateStatus("error");

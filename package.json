@@ -27,6 +27,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "federlet": "node --import tsx packages/cli/src/index.ts",
     "check:shared-ui": "node scripts/check-shared-ui-compat.mjs",
     "check:styles": "node scripts/run-with-tsx.mjs node scripts/check-style-pollution.mjs",
     "clean": "turbo run clean"

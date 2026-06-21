@@ -1,3 +1,4 @@
+import { federletLogger } from "./logger";
 import { registerRuntimeRemoteEntries } from "./runtime-remotes";
 import type {
   RemoteEntryType,
@@ -393,10 +394,15 @@ function reportIncompatibleRemote(
   remote: RuntimeRemoteManifestItem,
   shellProtocolVersion: string,
 ) {
-  console.error("Remote protocol is incompatible with Shell", {
+  federletLogger.error({
+    context: {
+      shellProtocolVersion,
+      supportedShellProtocolVersions: remote.supportedShellProtocolVersions,
+    },
+    event: "remote.protocol.incompatible",
+    message: "Remote protocol is incompatible with Shell",
     remoteName: remote.remoteName,
-    shellProtocolVersion,
-    supportedShellProtocolVersions: remote.supportedShellProtocolVersions,
+    scope: "mf-runtime",
   });
 }
 /**
@@ -471,8 +477,13 @@ export async function bootstrapRuntimeRemoteRegistry({
   }
 
   if (!isRuntimeRemoteManifest(manifest)) {
-    console.error("Injected runtime remote manifest is invalid", {
-      runtimeEnv,
+    federletLogger.error({
+      context: {
+        runtimeEnv,
+      },
+      event: "remote.manifest.invalid",
+      message: "Injected runtime remote manifest is invalid",
+      scope: "mf-runtime",
     });
     registry.registerMany(fallbackRoutes);
     return fallbackRoutes;

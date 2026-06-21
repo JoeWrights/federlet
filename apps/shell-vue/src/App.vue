@@ -3,10 +3,13 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import {
   createEventBus,
+  federletLogger,
+  runtimeRemoteRegistry,
   validateFederletEventPayload,
 } from "@federlet/mf-runtime";
 import { createRemotePreloader, RemoteAppBoundary } from "@federlet/vue-shell";
 import type { MicroEventBus, RemoteRouteConfig } from "@federlet/shared-types";
+import type { RemoteLoadOptions } from "@federlet/mf-runtime";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
@@ -14,7 +17,12 @@ const route = useRoute();
 const router = useRouter();
 const routes = ref<RemoteRouteConfig[]>(remoteRoutes);
 const routesReady = ref(false);
-const remotePreloader = createRemotePreloader();
+const REMOTE_LOAD_OPTIONS: RemoteLoadOptions = {
+  registry: runtimeRemoteRegistry,
+};
+const remotePreloader = createRemotePreloader({
+  loadOptions: REMOTE_LOAD_OPTIONS,
+});
 const eventBus = createShellEventBus();
 let removePreloadGuard: (() => void) | undefined;
 
@@ -22,7 +30,14 @@ function createShellEventBus() {
   return createEventBus({
     validatePayload: validateFederletEventPayload,
     onInvalidEvent(event) {
-      console.warn(`Rejected federlet event ${event.eventName}`, event);
+      federletLogger.warn({
+        context: {
+          event,
+        },
+        event: "event-bus.invalid-event",
+        message: "Rejected federlet event",
+        scope: "shell-vue",
+      });
     },
   });
 }
@@ -51,7 +66,14 @@ async function preloadRemoteRoute(remoteRoute: RemoteRouteConfig) {
   try {
     await remotePreloader.preload(remoteRoute);
   } catch (error) {
-    console.error(`Failed to preload remote ${remoteRoute.id}`, error);
+    federletLogger.error({
+      error,
+      event: "remote.preload.failed",
+      message: "Failed to preload remote",
+      remoteName: remoteRoute.remoteName,
+      routeId: remoteRoute.id,
+      scope: "shell-vue",
+    });
   }
 }
 
@@ -156,6 +178,7 @@ onBeforeUnmount(() => {
       :key="currentRemoteRoute.id"
       :route="currentRemoteRoute"
       :create-mount-context="createRemoteMountContext"
+      :load-options="REMOTE_LOAD_OPTIONS"
     />
   </div>
 </template>

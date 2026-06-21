@@ -1,4 +1,5 @@
 import {
+  federletLogger,
   preloadRemoteApp,
   RemoteLoadErrorCode,
   type RemoteLoadOptions,
@@ -295,10 +296,15 @@ export function createRemoteErrorMessage(
  */
 export function reportRemoteDomEscapes(issues: RemoteDomEscapeIssue[]) {
   for (const issue of issues) {
-    console.error(
-      `Remote ${issue.remoteName} created DOM outside its container during ${issue.phase}`,
-      issue,
-    );
+    federletLogger.error({
+      context: {
+        issue,
+      },
+      event: "remote.dom.escape",
+      message: "Remote created DOM outside its container",
+      remoteName: issue.remoteName,
+      scope: "shell-core",
+    });
   }
 }
 
@@ -319,7 +325,12 @@ export function scheduleRemoteUnmount(
   window.setTimeout(() => {
     void Promise.resolve(instance.unmount())
       .catch((error: unknown) => {
-        console.error("Failed to unmount remote app", error);
+        federletLogger.error({
+          error,
+          event: "remote.unmount.failed",
+          message: "Failed to unmount remote app",
+          scope: "shell-core",
+        });
       })
       .finally(() => {
         afterUnmount?.();

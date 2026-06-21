@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import {
+  federletLogger,
   mountRemoteApp,
 } from "@federlet/mf-runtime";
 import { createSandboxedRemoteMount } from "@federlet/sandbox";
@@ -192,10 +193,14 @@ export function useRemoteAppMount({
   );
   const handleRemoteRuntimeError = useCallback(
     (runtimeError: unknown) => {
-      console.error(
-        `Remote ${route.remoteName} reported a runtime error`,
-        runtimeError,
-      );
+      federletLogger.error({
+        error: runtimeError,
+        event: "remote.runtime.error",
+        message: "Remote reported a runtime error",
+        remoteName: route.remoteName,
+        routeId: route.id,
+        scope: "react-shell",
+      });
       onError?.(runtimeError, route);
 
       const instance = instanceRef.current;
@@ -269,7 +274,14 @@ export function useRemoteAppMount({
         instanceRef.current = instance;
         updateStatus("ready");
       } catch (error) {
-        console.error(`Failed to mount remote ${route.id}`, error);
+        federletLogger.error({
+          error,
+          event: "remote.mount.failed",
+          message: "Failed to mount remote",
+          remoteName: route.remoteName,
+          routeId: route.id,
+          scope: "react-shell",
+        });
         onError?.(error, route);
 
         if (!cancelled) {

@@ -233,11 +233,16 @@ describe("loadRuntimeRemoteRoutes", () => {
       },
     ]);
     expect(consoleError).toHaveBeenCalledWith(
-      "Remote protocol is incompatible with Shell",
+      "[federlet] mf-runtime:remote.protocol.incompatible Remote protocol is incompatible with Shell",
       expect.objectContaining({
+        context: {
+          shellProtocolVersion: "1",
+          supportedShellProtocolVersions: ["0"],
+        },
+        event: "remote.protocol.incompatible",
+        message: "Remote protocol is incompatible with Shell",
         remoteName: "remote_legacy",
-        shellProtocolVersion: "1",
-        supportedShellProtocolVersions: ["0"],
+        scope: "mf-runtime",
       }),
     );
   });
@@ -260,9 +265,14 @@ describe("loadRuntimeRemoteRoutes", () => {
     expect(routes).toBe(fallbackRoutes);
     expect(registerRemoteEntries).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(
-      "Injected runtime remote manifest is invalid",
+      "[federlet] mf-runtime:remote.manifest.invalid Injected runtime remote manifest is invalid",
       expect.objectContaining({
-        runtimeEnv: "test",
+        context: {
+          runtimeEnv: "test",
+        },
+        event: "remote.manifest.invalid",
+        message: "Injected runtime remote manifest is invalid",
+        scope: "mf-runtime",
       }),
     );
   });

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
+import { createRuntimeRemoteRegistry } from "@federlet/mf-runtime";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 import { App, createRemoteRouteElement, readSandboxRiskSnapshot } from "./App";
 
@@ -21,6 +22,8 @@ interface SandboxRiskTestWindow extends Window {
 }
 
 const remotePreloaderMocks = vi.hoisted(() => ({
+  boundaryLoadOptions: [] as unknown[],
+  preloaderOptions: [] as unknown[],
   preload: vi.fn(),
 }));
 
@@ -34,20 +37,30 @@ vi.mock("./runtime-manifest", async (importOriginal) => {
 });
 
 vi.mock("@federlet/react-shell", () => ({
-  createRemotePreloader: vi.fn(() => ({
-    preload: remotePreloaderMocks.preload,
-  })),
+  createRemotePreloader: vi.fn((options) => {
+    remotePreloaderMocks.preloaderOptions.push(options);
+
+    return {
+      preload: remotePreloaderMocks.preload,
+    };
+  }),
   RemoteAppBoundary: ({
+    loadOptions,
     route,
     sandbox,
   }: {
+    loadOptions?: unknown;
     route: { title: string };
     sandbox?: false;
-  }) => (
-    <section>
-      Boundary {route.title} sandbox {sandbox === false ? "off" : "on"}
-    </section>
-  ),
+  }) => {
+    remotePreloaderMocks.boundaryLoadOptions.push(loadOptions);
+
+    return (
+      <section>
+        Boundary {route.title} sandbox {sandbox === false ? "off" : "on"}
+      </section>
+    );
+  },
 }));
 
 const mockedLoadRuntimeRemoteRoutes = vi.mocked(loadRuntimeRemoteRoutes);
@@ -64,6 +77,8 @@ afterEach(() => {
   root = null;
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
+  remotePreloaderMocks.boundaryLoadOptions.length = 0;
+  remotePreloaderMocks.preloaderOptions.length = 0;
   remotePreloaderMocks.preload.mockReset();
 });
 
@@ -138,6 +153,27 @@ describe("createRemoteRouteElement", () => {
 
     expect(element.props.sandbox).toBe(false);
   });
+
+  it("passes remote load options through to remote boundaries", () => {
+    const loadOptions = {
+      registry: createRuntimeRemoteRegistry(),
+    };
+    const element = createRemoteRouteElement(
+      {
+        basename: "/orders",
+        exposedModule: "./mount",
+        id: "orders",
+        path: "/orders/*",
+        remoteName: "remote_orders",
+        title: "Orders",
+      },
+      undefined,
+      undefined,
+      loadOptions,
+    );
+
+    expect(element.props.loadOptions).toBe(loadOptions);
+  });
 });
 
 describe("App runtime routes", () => {
@@ -207,6 +243,27 @@ describe("App runtime routes", () => {
 
     expect(document.body.textContent).toContain("Orders");
     expect(document.body.textContent).toContain("remote_orders");
+  });
+
+  it("creates the remote preloader with registry-backed load options", async () => {
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([]);
+    const host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root?.render(
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(remotePreloaderMocks.preloaderOptions[0]).toEqual({
+      loadOptions: {
+        registry: expect.any(Object),
+      },
+    });
   });
 
   it("preloads a remote when navigation links receive pointer or focus intent", async () => {

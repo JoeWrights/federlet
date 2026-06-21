@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import {
   createEventBus,
+  federletLogger,
+  runtimeRemoteRegistry,
   validateFederletEventPayload,
 } from "@federlet/mf-runtime";
 import {
@@ -11,6 +13,7 @@ import {
 import type { RemoteRouteConfig } from "@federlet/shared-types";
 import type { MicroEventBus } from "@federlet/shared-types";
 import type { RemotePreloader } from "@federlet/react-shell";
+import type { RemoteLoadOptions } from "@federlet/mf-runtime";
 import { remoteRoutes } from "./remote-routes";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
@@ -34,6 +37,10 @@ interface SandboxRiskWindow extends Window {
   __FEDERLET_SANDBOX_RISK__?: FederletSandboxRiskState;
   __FEDERLET_UNSANDBOXED_WINDOW_WRITE__?: string;
 }
+
+const REMOTE_LOAD_OPTIONS: RemoteLoadOptions = {
+  registry: runtimeRemoteRegistry,
+};
 
 export interface SandboxRiskSnapshot {
   bodyNodeLeak: boolean;
@@ -289,10 +296,12 @@ function HomePage({
 
 function PreloadedRemoteRoute({
   eventBus,
+  loadOptions,
   preloadRoute,
   route,
 }: {
   eventBus?: MicroEventBus;
+  loadOptions?: RemoteLoadOptions;
   preloadRoute: (route: RemoteRouteConfig) => Promise<void>;
   route: RemoteRouteConfig;
 }) {
@@ -324,6 +333,7 @@ function PreloadedRemoteRoute({
       createMountContext={
         eventBus ? createRemoteMountContextFactory(eventBus) : undefined
       }
+      loadOptions={loadOptions}
     />
   );
 }
@@ -337,6 +347,7 @@ export function createRemoteRouteElement(
   route: RemoteRouteConfig,
   preloadRoute?: (route: RemoteRouteConfig) => Promise<void>,
   eventBus?: MicroEventBus,
+  loadOptions?: RemoteLoadOptions,
 ) {
   const createMountContext = eventBus
     ? createRemoteMountContextFactory(eventBus)
@@ -348,6 +359,7 @@ export function createRemoteRouteElement(
       <PreloadedRemoteRoute
         eventBus={eventBus}
         key={route.id}
+        loadOptions={loadOptions}
         route={route}
         preloadRoute={preloadRoute}
       />
@@ -360,6 +372,7 @@ export function createRemoteRouteElement(
       route={route}
       sandbox={sandbox}
       createMountContext={createMountContext}
+      loadOptions={loadOptions}
     />
   );
 }
@@ -382,7 +395,14 @@ function createRemoteMountContextFactory(eventBus: MicroEventBus) {
     container,
     eventBus,
     onError(error: unknown) {
-      console.error(`Remote runtime error from ${route.id}`, error);
+      federletLogger.error({
+        error,
+        event: "remote.runtime.error",
+        message: "Remote reported a runtime error",
+        remoteName: route.remoteName,
+        routeId: route.id,
+        scope: "shell-react",
+      });
     },
     props: {
       mountedAt: new Date().toISOString(),
@@ -394,7 +414,14 @@ function createShellEventBus() {
   return createEventBus({
     validatePayload: validateFederletEventPayload,
     onInvalidEvent(event) {
-      console.warn(`Rejected federlet event ${event.eventName}`, event);
+      federletLogger.warn({
+        context: {
+          event,
+        },
+        event: "event-bus.invalid-event",
+        message: "Rejected federlet event",
+        scope: "shell-react",
+      });
     },
   });
 }
@@ -408,7 +435,9 @@ export function App() {
   const [routes, setRoutes] = useState<RemoteRouteConfig[]>(remoteRoutes);
   const [routesReady, setRoutesReady] = useState(false);
   const [remotePreloader] = useState<RemotePreloader>(() =>
-    createRemotePreloader(),
+    createRemotePreloader({
+      loadOptions: REMOTE_LOAD_OPTIONS,
+    }),
   );
   const [eventBus] = useState<MicroEventBus>(() => createShellEventBus());
   const remoteRouteElements = routesReady ? routes : [];
@@ -418,7 +447,14 @@ export function App() {
       try {
         await remotePreloader.preload(route);
       } catch (error) {
-        console.error(`Failed to preload remote ${route.id}`, error);
+        federletLogger.error({
+          error,
+          event: "remote.preload.failed",
+          message: "Failed to preload remote",
+          remoteName: route.remoteName,
+          routeId: route.id,
+          scope: "shell-react",
+        });
       }
     },
     [remotePreloader],
@@ -428,17 +464,31 @@ export function App() {
     const unsubscribeMounted = eventBus.on(
       "remote.lifecycle.mounted",
       (payload, meta) => {
-        console.info("shell received remote.lifecycle.mounted", payload, meta);
+        federletLogger.info({
+          context: {
+            meta,
+            payload,
+          },
+          event: "remote.lifecycle.mounted",
+          message: "Shell received remote mounted event",
+          remoteName: payload.remoteName,
+          scope: "shell-react",
+        });
       },
     );
     const unsubscribeUnmounted = eventBus.on(
       "remote.lifecycle.unmounted",
       (payload, meta) => {
-        console.info(
-          "shell received remote.lifecycle.unmounted",
-          payload,
-          meta,
-        );
+        federletLogger.info({
+          context: {
+            meta,
+            payload,
+          },
+          event: "remote.lifecycle.unmounted",
+          message: "Shell received remote unmounted event",
+          remoteName: payload.remoteName,
+          scope: "shell-react",
+        });
       },
     );
 
@@ -514,6 +564,7 @@ export function App() {
               route,
               preloadRemoteRoute,
               eventBus,
+              REMOTE_LOAD_OPTIONS,
             )}
           />
         ))}

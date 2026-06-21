@@ -1,4 +1,5 @@
 import mitt from "mitt";
+import { federletLogger } from "./logger";
 import type {
   FederletEventListener,
   FederletEventMeta,
@@ -135,7 +136,14 @@ function reportInvalidEvent(
     throw new Error(message);
   }
 
-  console.warn(message, event);
+  federletLogger.warn({
+    context: {
+      event,
+    },
+    event: "event-bus.invalid-event",
+    message,
+    scope: "mf-runtime",
+  });
 }
 
 /**

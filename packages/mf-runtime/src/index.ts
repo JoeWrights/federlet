@@ -11,6 +11,11 @@ export {
   type EventBusInvalidEvent,
 } from "./event-bus";
 export {
+  createRemoteDebugSnapshot,
+  type RemoteDebugSnapshot,
+  type RemoteDebugSnapshotItem,
+} from "./debug";
+export {
   createCircuitBreakerStore,
   defaultRemoteLoader,
   mountRemoteApp,
@@ -52,3 +57,10 @@ export {
   type RuntimeRemoteRegistry,
   type RuntimeRemoteRegistrationStatus,
 } from "./remote-registry";
+export {
+  createFederletLogger,
+  federletLogger,
+  type FederletLogger,
+  type FederletLogEvent,
+  type FederletLogLevel,
+} from "./logger";

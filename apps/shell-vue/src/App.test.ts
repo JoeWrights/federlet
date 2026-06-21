@@ -7,7 +7,9 @@ import App from "./App.vue";
 import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 
 const remotePreloaderMocks = vi.hoisted(() => ({
+  boundaryLoadOptions: [] as unknown[],
   mountContexts: [] as unknown[],
+  preloaderOptions: [] as unknown[],
   preload: vi.fn(),
 }));
 
@@ -25,14 +27,22 @@ vi.mock("@federlet/vue-shell", async (importOriginal) => {
 
   return {
     ...actual,
-    createRemotePreloader: vi.fn(() => ({
-      preload: remotePreloaderMocks.preload,
-    })),
+    createRemotePreloader: vi.fn((options) => {
+      remotePreloaderMocks.preloaderOptions.push(options);
+
+      return {
+        preload: remotePreloaderMocks.preload,
+      };
+    }),
     RemoteAppBoundary: defineComponent({
       props: {
         createMountContext: {
           required: false,
           type: Function,
+        },
+        loadOptions: {
+          required: false,
+          type: Object,
         },
         route: {
           required: true,
@@ -40,6 +50,8 @@ vi.mock("@federlet/vue-shell", async (importOriginal) => {
         },
       },
       setup(props) {
+        remotePreloaderMocks.boundaryLoadOptions.push(props.loadOptions);
+
         if (props.createMountContext) {
           remotePreloaderMocks.mountContexts.push(
             props.createMountContext({
@@ -103,7 +115,9 @@ afterEach(() => {
   host = null;
   document.body.innerHTML = "";
   mockedLoadRuntimeRemoteRoutes.mockReset();
+  remotePreloaderMocks.boundaryLoadOptions.length = 0;
   remotePreloaderMocks.mountContexts.length = 0;
+  remotePreloaderMocks.preloaderOptions.length = 0;
   remotePreloaderMocks.preload.mockReset();
 });
 
@@ -158,6 +172,20 @@ describe("Vue Shell runtime routes", () => {
 
     expect(document.body.textContent).toContain("Orders");
     expect(document.body.textContent).toContain("remote_orders");
+  });
+
+  it("creates the remote preloader with registry-backed load options", async () => {
+    mockedLoadRuntimeRemoteRoutes.mockResolvedValue([]);
+
+    await renderApp("/");
+    await flushPromises();
+    await nextTick();
+
+    expect(remotePreloaderMocks.preloaderOptions[0]).toEqual({
+      loadOptions: {
+        registry: expect.any(Object),
+      },
+    });
   });
 
   it("preloads a remote when navigation links receive pointer or focus intent", async () => {
@@ -251,5 +279,8 @@ describe("Vue Shell runtime routes", () => {
         },
       }),
     );
+    expect(remotePreloaderMocks.boundaryLoadOptions[0]).toEqual({
+      registry: expect.any(Object),
+    });
   });
 });
