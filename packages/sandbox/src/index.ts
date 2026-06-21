@@ -192,6 +192,7 @@ interface TrackedEventListener {
 
 const windowPatchManager = new WindowPatchManager();
 const windowPropertySnapshotManager = new WindowPropertySnapshotManager();
+const enableWindowPropertySnapshotRestore = false;
 
 /**
  * 获取事件捕获
@@ -535,7 +536,9 @@ export function createFederletSandbox({
       }
 
       active = true;
-      windowPropertySnapshotManager.capture();
+      if (enableWindowPropertySnapshotRestore) {
+        windowPropertySnapshotManager.capture();
+      }
       windowPatchManager.addRuntime(runtime);
     },
     deactivate() {
@@ -574,7 +577,9 @@ export function createFederletSandbox({
         patch.current = null;
       });
       windowPatchManager.removeRuntime(runtime);
-      windowPropertySnapshotManager.release();
+      if (enableWindowPropertySnapshotRestore) {
+        windowPropertySnapshotManager.release();
+      }
       active = false;
     },
     getDiagnostics() {

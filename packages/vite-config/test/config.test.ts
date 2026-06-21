@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { federation } from "@module-federation/vite";
+import react from "@vitejs/plugin-react";
 import {
   createReactHostConfig,
   createReactRemoteConfig,
+  createVueHostConfig,
   createVueRemoteConfig,
 } from "../src/index";
 
@@ -12,8 +14,15 @@ vi.mock("@module-federation/vite", () => ({
   })),
 }));
 
+vi.mock("@vitejs/plugin-react", () => ({
+  default: vi.fn(() => ({
+    name: "vite:react-babel",
+  })),
+}));
+
 const appDir = "/workspace/apps/demo";
 const federationMock = vi.mocked(federation);
+const reactMock = vi.mocked(react);
 
 function pluginNames(config: ReturnType<typeof createReactHostConfig>) {
   return (config.plugins ?? []).map((plugin) => plugin && "name" in plugin && plugin.name);
@@ -38,6 +47,7 @@ function postcssPluginNames(config: ReturnType<typeof createReactRemoteConfig>) 
 describe("vite config factories", () => {
   beforeEach(() => {
     federationMock.mockClear();
+    reactMock.mockClear();
   });
 
   it("creates a React host config with server, aliases and federation remotes", () => {
@@ -168,6 +178,32 @@ describe("vite config factories", () => {
     expect(postcssPluginNames(config)).not.toContain("federlet-style-isolation");
   });
 
+  it("adds the React plugin to Vue hosts so Vite React remotes have a refresh preamble", () => {
+    const config = createVueHostConfig({
+      appDir,
+      name: "shell_vue",
+      port: 3004,
+      remotes: {
+        remote_react: "remote_react@http://localhost:3001/remoteEntry.js",
+      },
+    });
+
+    expect(reactMock).toHaveBeenCalledTimes(1);
+    expect(pluginNames(config)).toContain("vite:react-babel");
+    expect(federationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "shell_vue",
+        remotes: {
+          remote_react: {
+            type: "module",
+            name: "remote_react",
+            entry: "http://localhost:3001/remoteEntry.js",
+          },
+        },
+      }),
+    );
+  });
+
   it("creates a Vue remote config with Vue plugin and shared Vue singleton", () => {
     const config = createVueRemoteConfig({
       appDir,
@@ -179,6 +215,11 @@ describe("vite config factories", () => {
     });
 
     expect(pluginNames(config)).toContain("vite:module-federation");
+    expect(config.define).toMatchObject({
+      __VUE_OPTIONS_API__: true,
+      __VUE_PROD_DEVTOOLS__: false,
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+    });
     expect(federationMock).toHaveBeenCalledWith({
       name: "remote_vue",
       filename: "remoteEntry.js",

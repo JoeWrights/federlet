@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
+import { pluginVue } from "@rsbuild/plugin-vue";
 import {
   createReactHostConfig,
   createReactRemoteConfig,
+  createVueHostConfig,
   createVueRemoteConfig,
 } from "../src/index";
 
@@ -13,8 +15,16 @@ vi.mock("@module-federation/rsbuild-plugin", () => ({
   })),
 }));
 
+vi.mock("@rsbuild/plugin-vue", () => ({
+  pluginVue: vi.fn(() => ({
+    name: "rsbuild:vue",
+    setup() {},
+  })),
+}));
+
 const appDir = "/workspace/apps/demo";
 const pluginModuleFederationMock = vi.mocked(pluginModuleFederation);
+const pluginVueMock = vi.mocked(pluginVue);
 
 function pluginNames(config: ReturnType<typeof createReactHostConfig>) {
   return (config.plugins ?? []).map((plugin) => plugin && "name" in plugin && plugin.name);
@@ -43,6 +53,7 @@ function postcssPluginNames(config: ReturnType<typeof createReactRemoteConfig>) 
 describe("rsbuild config factories", () => {
   beforeEach(() => {
     pluginModuleFederationMock.mockClear();
+    pluginVueMock.mockClear();
   });
 
   it("disables lazy compilation so federated remote route chunks resolve in dev", () => {
@@ -116,6 +127,7 @@ describe("rsbuild config factories", () => {
     });
 
     expect(config.server?.port).toBe(3001);
+    expect(config.dev?.assetPrefix).toBe(true);
     expect(pluginNames(config)).toContain("rsbuild:module-federation-enhanced");
     expect(pluginModuleFederationMock).toHaveBeenCalledWith({
       name: "remote_react",
@@ -165,6 +177,7 @@ describe("rsbuild config factories", () => {
     expect(config.source?.entry).toEqual({
       index: "/workspace/apps/demo/src/main.ts",
     });
+    expect(config.dev?.assetPrefix).toBe(true);
     expect(pluginNames(config)).toContain("rsbuild:module-federation-enhanced");
     expect(pluginModuleFederationMock).toHaveBeenCalledWith({
       name: "remote_vue",
@@ -180,6 +193,34 @@ describe("rsbuild config factories", () => {
       },
       dts: false,
       manifest: false,
+    });
+  });
+
+  it("disables Vue SFC hot reload for Rsbuild Vue apps to avoid cross-app HMR collisions", () => {
+    createVueHostConfig({
+      appDir,
+      name: "shell_vue",
+      port: 3004,
+      remotes: {},
+    });
+    createVueRemoteConfig({
+      appDir,
+      name: "remote_vue",
+      port: 3002,
+      exposes: {
+        "./mount": "./src/mount.ts",
+      },
+    });
+
+    expect(pluginVueMock).toHaveBeenNthCalledWith(1, {
+      vueLoaderOptions: {
+        hotReload: false,
+      },
+    });
+    expect(pluginVueMock).toHaveBeenNthCalledWith(2, {
+      vueLoaderOptions: {
+        hotReload: false,
+      },
     });
   });
 });

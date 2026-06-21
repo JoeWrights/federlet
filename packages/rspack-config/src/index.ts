@@ -240,6 +240,9 @@ function createBaseConfig(
               {
                 test: /\.vue$/,
                 loader: "vue-loader",
+                options: {
+                  hotReload: false,
+                },
               },
             ]
           : []),
@@ -270,7 +273,16 @@ function createBaseConfig(
       new rspack.HtmlRspackPlugin({
         template: path.resolve(options.appDir, "index.html"),
       }),
-      ...(framework === "vue" ? [new VueLoaderPlugin()] : []),
+      ...(framework === "vue"
+        ? [
+            new VueLoaderPlugin(),
+            new rspack.DefinePlugin({
+              __VUE_OPTIONS_API__: JSON.stringify(true),
+              __VUE_PROD_DEVTOOLS__: JSON.stringify(false),
+              __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: JSON.stringify(false),
+            }),
+          ]
+        : []),
     ],
     devServer: {
       port: options.port,

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createReactHostConfig,
   createReactRemoteConfig,
+  createVueRemoteConfig,
 } from "../src/index";
 
 vi.mock("@module-federation/enhanced/rspack", () => ({
@@ -262,5 +263,35 @@ describe("rspack config factories", () => {
       dts: false,
       manifest: false,
     });
+  });
+
+  it("defines Vue feature flags for Vue remotes", () => {
+    const config = createVueRemoteConfig({
+      appDir: "/workspace/apps/remote-vue",
+      name: "remote_vue",
+      port: 3002,
+      exposes: {
+        "./mount": "./src/mount.ts",
+      },
+    });
+
+    expect(JSON.stringify(config.plugins)).toContain("__VUE_OPTIONS_API__");
+    expect(JSON.stringify(config.plugins)).toContain("__VUE_PROD_DEVTOOLS__");
+    expect(JSON.stringify(config.plugins)).toContain(
+      "__VUE_PROD_HYDRATION_MISMATCH_DETAILS__",
+    );
+  });
+
+  it("disables vue-loader HMR injection for Vue remotes", () => {
+    const config = createVueRemoteConfig({
+      appDir: "/workspace/apps/remote-vue",
+      name: "remote_vue",
+      port: 3002,
+      exposes: {
+        "./mount": "./src/mount.ts",
+      },
+    });
+
+    expect(JSON.stringify(config.module?.rules)).toContain("\"hotReload\":false");
   });
 });

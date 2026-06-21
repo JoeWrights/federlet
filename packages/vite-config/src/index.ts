@@ -221,10 +221,19 @@ function createBaseConfig(
 ): UserConfig {
   const entry = options.entry ?? (framework === "react" ? "src/main.tsx" : "src/main.ts");
   const styleIsolation = resolveStyleIsolation(options);
+  const define =
+    framework === "vue"
+      ? {
+          __VUE_OPTIONS_API__: true,
+          __VUE_PROD_DEVTOOLS__: false,
+          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+        }
+      : undefined;
 
   return {
     root: options.appDir,
     base: options.publicPath ?? "/",
+    ...(define ? { define } : {}),
     server: {
       port: options.port,
       strictPort: true,
@@ -325,6 +334,7 @@ export function createVueHostConfig(options: HostConfigOptions): UserConfig {
   return defineConfig({
     ...config,
     plugins: [
+      react(),
       ...(config.plugins ?? []),
       federation({
         name: options.name,

@@ -152,7 +152,13 @@ describe("webpack config factories", () => {
       ".js",
       ".json",
     ]);
+    expect(JSON.stringify(config.module?.rules)).toContain("\"hotReload\":false");
     expect(pluginNames(config)).toContain("webpack:module-federation-enhanced");
+    expect(JSON.stringify(config.plugins)).toContain("__VUE_OPTIONS_API__");
+    expect(JSON.stringify(config.plugins)).toContain("__VUE_PROD_DEVTOOLS__");
+    expect(JSON.stringify(config.plugins)).toContain(
+      "__VUE_PROD_HYDRATION_MISMATCH_DETAILS__",
+    );
     expect(ModuleFederationPluginMock).toHaveBeenCalledWith({
       name: "remote_vue",
       filename: "remoteEntry.js",

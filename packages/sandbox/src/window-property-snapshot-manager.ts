@@ -76,6 +76,7 @@ export class WindowPropertySnapshotManager {
     return (
       key === "__FEDERATION__" ||
       key === "__FEDERATION__.__INSTANCES__" ||
+      key.startsWith("chunk_") ||
       key.startsWith("webpackChunk") ||
       key.startsWith("webpackHotUpdate") ||
       key.startsWith("__webpack") ||

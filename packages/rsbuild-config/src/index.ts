@@ -106,6 +106,18 @@ function vueShared(): SharedConfig {
   };
 }
 
+function createFrameworkPlugin(framework: "react" | "vue") {
+  if (framework === "react") {
+    return pluginReact();
+  }
+
+  return pluginVue({
+    vueLoaderOptions: {
+      hotReload: false,
+    },
+  });
+}
+
 function resolveStyleIsolation(
   options: BaseAppConfigOptions,
 ): { scopeClass: string } | null {
@@ -190,7 +202,7 @@ function createBaseConfig(
         config.lazyCompilation = false;
       },
     },
-    plugins: [framework === "react" ? pluginReact() : pluginVue()],
+    plugins: [createFrameworkPlugin(framework)],
   };
 }
 
@@ -249,6 +261,10 @@ export function createReactRemoteConfig(
 
   return defineConfig({
     ...config,
+    dev: {
+      ...config.dev,
+      assetPrefix: true,
+    },
     plugins: [
       ...(config.plugins ?? []),
       pluginModuleFederation({
@@ -275,6 +291,10 @@ export function createVueRemoteConfig(options: RemoteConfigOptions): RsbuildConf
 
   return defineConfig({
     ...config,
+    dev: {
+      ...config.dev,
+      assetPrefix: true,
+    },
     plugins: [
       ...(config.plugins ?? []),
       pluginModuleFederation({

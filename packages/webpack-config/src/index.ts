@@ -6,7 +6,7 @@ import {
   createStyleIsolationPostcssPlugin,
 } from "@federlet/style-isolation";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import type { Configuration } from "webpack";
+import webpack, { type Configuration } from "webpack";
 import type {} from "webpack-dev-server";
 import { VueLoaderPlugin } from "vue-loader";
 
@@ -221,6 +221,9 @@ function createBaseConfig(
               {
                 test: /\.vue$/,
                 loader: require.resolve("vue-loader"),
+                options: {
+                  hotReload: false,
+                },
               },
             ]
           : []),
@@ -251,7 +254,16 @@ function createBaseConfig(
       new HtmlWebpackPlugin({
         template: path.resolve(options.appDir, "index.html"),
       }),
-      ...(framework === "vue" ? [new VueLoaderPlugin()] : []),
+      ...(framework === "vue"
+        ? [
+            new VueLoaderPlugin(),
+            new webpack.DefinePlugin({
+              __VUE_OPTIONS_API__: JSON.stringify(true),
+              __VUE_PROD_DEVTOOLS__: JSON.stringify(false),
+              __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: JSON.stringify(false),
+            }),
+          ]
+        : []),
     ],
     devServer: {
       port: options.port,
