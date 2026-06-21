@@ -5,6 +5,16 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./scope": {
+      "types": "./src/scope.ts",
+      "default": "./src/scope.ts"
+    }
+  },
   "scripts": {
     "build": "tsc --noEmit && mkdir -p dist && node -e \"require('fs').writeFileSync('dist/.keep', '')\"",
     "typecheck": "tsc --noEmit",

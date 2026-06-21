@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@federlet/shared-types": "workspace:*",
+    "@federlet/style-isolation": "workspace:*",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3"
   },

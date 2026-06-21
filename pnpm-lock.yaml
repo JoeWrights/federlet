@@ -80,6 +80,9 @@ importers:
       '@federlet/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../../packages/style-isolation
       antd:
         specifier: '5'
         version: 5.29.3(luxon@3.7.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -148,6 +151,9 @@ importers:
       '@federlet/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@federlet/style-isolation':
+        specifier: workspace:*
+        version: link:../../packages/style-isolation
       vue:
         specifier: ^3.5.25
         version: 3.5.35(typescript@5.9.3)

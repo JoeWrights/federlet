@@ -9,7 +9,7 @@ import { createRemoteEventBusLifecycle } from "./remote-event-bus";
 import { createVueRemoteRoutes } from "./routes";
 import "./styles.css";
 
-const REMOTE_NAME = "remote_vue";
+export const REMOTE_NAME = "remote_vue";
 
 /**
  * 为 Vue remote 创建局部路由实例。

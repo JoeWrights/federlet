@@ -105,6 +105,10 @@ function workspaceAliases(appDir: string): Record<string, string> {
       root,
       "packages/style-isolation/src/index.ts",
     ),
+    "@federlet/style-isolation/scope": path.resolve(
+      root,
+      "packages/style-isolation/src/scope.ts",
+    ),
     "@federlet/vue-shell": path.resolve(
       root,
       "packages/vue-shell/src/index.ts",

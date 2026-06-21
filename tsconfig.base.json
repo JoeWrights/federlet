@@ -26,6 +26,9 @@
       "@federlet/sandbox": ["packages/sandbox/src/index.ts"],
       "@federlet/shared-ui": ["packages/shared-ui/src/index.ts"],
       "@federlet/style-isolation": ["packages/style-isolation/src/index.ts"],
+      "@federlet/style-isolation/scope": [
+        "packages/style-isolation/src/scope.ts"
+      ],
       "@federlet/vue-shell": ["packages/vue-shell/src/index.ts"]
     }
   }

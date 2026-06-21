@@ -5,7 +5,7 @@ import { App } from "./App";
 import { createRemoteEventBusLifecycle } from "./remote-event-bus";
 import "./styles.css";
 
-const REMOTE_NAME = "remote_react";
+export const REMOTE_NAME = "remote_react";
 
 /**
  * 创建 DOM 逃逸探针。

@@ -1,5 +1,9 @@
 import postcss, { type AtRule, type Rule } from "postcss";
 import selectorParser, { type Selector } from "postcss-selector-parser";
+export {
+  createRemoteContainerClassName,
+  createRemoteScopeClass,
+} from "./scope";
 
 /**
  * 改写 CSS selector 的选项。
@@ -190,29 +194,6 @@ const documentLevelSelectors = new Set([":root", "html", "body"]);
  * 全局根 id。
  */
 const globalRootIds = new Set(["app", "root"]);
-
-/**
- * 创建远程 scope class。
- */
-export function createRemoteScopeClass(remoteName: string) {
-  const normalizedName = remoteName
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return `federlet-scope-${normalizedName}`;
-}
-
-/**
- * 创建远程容器 class。
- */
-export function createRemoteContainerClassName(
-  baseClassName: string,
-  remoteName: string,
-) {
-  return `${baseClassName} ${createRemoteScopeClass(remoteName)}`;
-}
 
 /**
  * 判断是否应该前缀 CSS 文件。
