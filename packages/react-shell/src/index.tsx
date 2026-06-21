@@ -9,6 +9,7 @@ import {
 import {
   mountRemoteApp,
 } from "@federlet/mf-runtime";
+import { createSandboxedRemoteMount } from "@federlet/sandbox";
 import {
   captureRemoteDomSnapshot,
   detectRemoteDomEscapes,
@@ -27,6 +28,7 @@ import type {
   RemoteLoadOptions,
   RemoteModuleLoader,
 } from "@federlet/mf-runtime";
+import type { CreateSandboxedRemoteMountOptions } from "@federlet/sandbox";
 import type {
   MicroAppContext,
   MicroAppInstance,
@@ -78,6 +80,8 @@ export interface RemoteAppBoundaryProps {
   messages?: RemoteErrorMessageOverrides;
   /** 错误处理函数。 */
   onError?: (error: unknown, route: RemoteRouteConfig) => void;
+  /** JS 运行时沙箱选项；传入 false 可关闭沙箱。 */
+  sandbox?: CreateSandboxedRemoteMountOptions["sandbox"];
   /** 状态变化处理函数。 */
   onStatusChange?: (status: RemoteAppStatus, route: RemoteRouteConfig) => void;
   /** 错误渲染函数。 */
@@ -160,6 +164,7 @@ export function useRemoteAppMount({
   onError,
   onStatusChange,
   route,
+  sandbox,
 }: UseRemoteAppMountOptions): UseRemoteAppMountResult {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<MicroAppInstance | null>(null);
@@ -227,21 +232,23 @@ export function useRemoteAppMount({
           container,
           route,
         });
-        const instance = await mountRemoteApp(
-          route,
-          {
-            ...mountContext,
-            onError(runtimeError: unknown) {
-              try {
-                mountContext.onError?.(runtimeError);
-              } finally {
-                handleRemoteRuntimeError(runtimeError);
-              }
-            },
+        const mountRemoteWithSandbox = createSandboxedRemoteMount({
+          mountRemote(context) {
+            return mountRemoteApp(route, context, loader, resolvedLoadOptions);
           },
-          loader,
-          resolvedLoadOptions,
-        );
+          route,
+          sandbox,
+        });
+        const instance = await mountRemoteWithSandbox({
+          ...mountContext,
+          onError(runtimeError: unknown) {
+            try {
+              mountContext.onError?.(runtimeError);
+            } finally {
+              handleRemoteRuntimeError(runtimeError);
+            }
+          },
+        });
 
         if (cancelled) {
           scheduleRemoteUnmount(instance);
@@ -305,6 +312,7 @@ export function useRemoteAppMount({
     resolvedLoadOptions,
     retryKey,
     route,
+    sandbox,
     shouldReportDomEscapes,
     updateStatus,
   ]);

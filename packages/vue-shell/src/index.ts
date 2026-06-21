@@ -11,6 +11,7 @@ import {
 import {
   mountRemoteApp,
 } from "@federlet/mf-runtime";
+import { createSandboxedRemoteMount } from "@federlet/sandbox";
 import {
   captureRemoteDomSnapshot,
   detectRemoteDomEscapes,
@@ -29,6 +30,7 @@ import type {
   RemoteLoadOptions,
   RemoteModuleLoader,
 } from "@federlet/mf-runtime";
+import type { CreateSandboxedRemoteMountOptions } from "@federlet/sandbox";
 import type {
   MicroAppContext,
   MicroAppInstance,
@@ -80,6 +82,8 @@ export interface RemoteAppBoundaryProps {
   messages?: RemoteErrorMessageOverrides;
   /** 错误处理函数。 */
   onError?: (error: unknown, route: RemoteRouteConfig) => void;
+  /** JS 运行时沙箱选项；传入 false 可关闭沙箱。 */
+  sandbox?: CreateSandboxedRemoteMountOptions["sandbox"];
   /** 状态变化处理函数。 */
   onStatusChange?: (status: RemoteAppStatus, route: RemoteRouteConfig) => void;
   /** 错误渲染函数。 */
@@ -163,6 +167,7 @@ export function useRemoteAppMount({
   onError,
   onStatusChange,
   route,
+  sandbox,
 }: UseRemoteAppMountOptions): UseRemoteAppMountResult {
   const containerHostRef = ref<HTMLDivElement | null>(null);
   const containerRef = ref<HTMLDivElement | null>(null);
@@ -283,21 +288,23 @@ export function useRemoteAppMount({
         container,
         route,
       });
-      const instance = await mountRemoteApp(
-        route,
-        {
-          ...mountContext,
-          onError(runtimeError: unknown) {
-            try {
-              mountContext.onError?.(runtimeError);
-            } finally {
-              handleRemoteRuntimeError(runtimeError);
-            }
-          },
+      const mountRemoteWithSandbox = createSandboxedRemoteMount({
+        mountRemote(context) {
+          return mountRemoteApp(route, context, loader, resolvedLoadOptions.value);
         },
-        loader,
-        resolvedLoadOptions.value,
-      );
+        route,
+        sandbox,
+      });
+      const instance = await mountRemoteWithSandbox({
+        ...mountContext,
+        onError(runtimeError: unknown) {
+          try {
+            mountContext.onError?.(runtimeError);
+          } finally {
+            handleRemoteRuntimeError(runtimeError);
+          }
+        },
+      });
 
       if (domSnapshot) {
         reportRemoteDomEscapes(
@@ -357,6 +364,10 @@ export const RemoteAppBoundary = defineComponent({
     loader: Function as PropType<RemoteModuleLoader>,
     messages: Object as PropType<RemoteErrorMessageOverrides>,
     onError: Function as PropType<RemoteAppBoundaryProps["onError"]>,
+    sandbox: {
+      default: undefined,
+      type: [Boolean, Object] as PropType<RemoteAppBoundaryProps["sandbox"]>,
+    },
     onStatusChange: Function as PropType<
       RemoteAppBoundaryProps["onStatusChange"]
     >,
@@ -375,6 +386,7 @@ export const RemoteAppBoundary = defineComponent({
       loader: props.loader,
       messages: props.messages,
       onError: props.onError,
+      sandbox: props.sandbox,
       onStatusChange: props.onStatusChange,
       route: props.route,
     });

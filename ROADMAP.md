@@ -71,8 +71,8 @@
 - [x] 样式隔离策略：先选 CSS Modules、命名空间、Shadow DOM 或约定式隔离。
 - [x] 全局样式污染检测。
 - [x] remote DOM 容器隔离规范：见 `docs/remote-dom-container-isolation.md`。
-- [ ] JS 运行时隔离/沙箱策略：明确是否采用快照沙箱、Proxy 沙箱、iframe 沙箱或无沙箱约束。
-- [ ] remote 全局副作用治理：限制 `window`、`document`、全局事件、定时器、存储等资源使用和清理。
+- [x] JS 运行时隔离/沙箱策略：默认采用轻量 Proxy/副作用沙箱，强隔离后续保留 iframe 选项，见 `@federlet/sandbox`。
+- [x] remote 全局副作用治理：React/Vue Shell 已在 remote 生命周期中自动清理 `window` listener、timer、raf 和全局 handler。
 - [ ] 第三方依赖共享白名单。
 - [x] React、Vue singleton 策略文档化：见 `docs/shared-runtime-strategy.md`。
 - [x] 老项目兼容策略：例如 Umi React 17 不共享 React runtime，见 `docs/shared-runtime-strategy.md`。

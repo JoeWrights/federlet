@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { setTimeout as waitForNodeTimer } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp, createCommentVNode, defineComponent, h, nextTick } from "vue";
 import {
@@ -43,9 +44,7 @@ const route: RemoteRouteConfig = {
 };
 
 function flushPromises() {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, 0);
-  });
+  return waitForNodeTimer(0).then(() => undefined);
 }
 
 describe("createRemoteContainerClassName", () => {
@@ -180,6 +179,7 @@ describe("RemoteAppBoundary", () => {
         render() {
           return h(RemoteAppBoundary, {
             route,
+            sandbox: false,
             ...props,
           });
         },
@@ -279,7 +279,9 @@ describe("RemoteAppBoundary", () => {
   it("does not mount the same remote twice after the boundary becomes ready", async () => {
     mockedMountRemoteApp.mockResolvedValue({ unmount: vi.fn() });
 
-    await renderBoundary();
+    await renderBoundary({
+      sandbox: undefined,
+    });
     await nextTick();
     await flushPromises();
     await nextTick();
@@ -327,9 +329,35 @@ describe("RemoteAppBoundary", () => {
       remoteRuntimeError,
     );
 
-    vi.runOnlyPendingTimers();
+    vi.advanceTimersByTime(0);
 
     expect(unmount).toHaveBeenCalledOnce();
+  });
+
+  it("cleans remote global side effects after unmount", async () => {
+    const listener = vi.fn();
+    const unmount = vi.fn();
+
+    mockedMountRemoteApp.mockImplementation(async () => {
+      window.addEventListener("click", listener);
+      window.setInterval(() => undefined, 1000);
+
+      return {
+        unmount,
+      };
+    });
+
+    await renderBoundary({
+      sandbox: undefined,
+    });
+
+    app?.unmount();
+    await waitForNodeTimer(0);
+    await Promise.resolve();
+    window.dispatchEvent(new MouseEvent("click"));
+
+    expect(unmount).toHaveBeenCalledOnce();
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("shows timeout, retry, and circuit messages with a retry button", async () => {

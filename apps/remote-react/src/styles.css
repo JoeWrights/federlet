@@ -86,6 +86,60 @@
   color: #7f1d1d;
 }
 
+.react-remote__seckill-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
+  margin-top: 14px;
+  padding: 16px;
+  background: #eff6ff;
+}
+
+.react-remote__seckill-card span {
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.react-remote__seckill-card strong {
+  color: #172554;
+  font-size: 28px;
+}
+
+.react-remote__seckill-card p {
+  margin: 0;
+  color: #1e40af;
+}
+
+.react-remote__risk-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.react-remote__risk-state div {
+  border-radius: 14px;
+  padding: 12px;
+  background: #eff6ff;
+}
+
+.react-remote__risk-state dt {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.react-remote__risk-state dd {
+  margin: 6px 0 0;
+  color: #1d4ed8;
+  font-size: 18px;
+  font-weight: 900;
+}
+
 .react-remote__risk-events {
   display: grid;
   gap: 6px;

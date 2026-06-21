@@ -17,7 +17,11 @@ import { loadRuntimeRemoteRoutes } from "./runtime-manifest";
 interface FederletSandboxRiskState {
   clickCount?: number;
   intervalId?: number;
+  rafFired?: boolean;
+  seckillRemainingSeconds?: number;
   source?: string;
+  timeoutFired?: boolean;
+  ticks?: number;
 }
 
 interface SandboxRiskWindow extends Window {
@@ -29,8 +33,12 @@ export interface SandboxRiskSnapshot {
   clickListenerCount: number;
   globalPollution: boolean;
   leakingTimer: boolean;
+  rafFired: boolean;
   runtimeStyleLeak: boolean;
   source?: string;
+  seckillRemainingSeconds?: number;
+  timeoutFired: boolean;
+  ticks: number;
 }
 
 export function readSandboxRiskSnapshot(): SandboxRiskSnapshot {
@@ -40,7 +48,11 @@ export function readSandboxRiskSnapshot(): SandboxRiskSnapshot {
       clickListenerCount: 0,
       globalPollution: false,
       leakingTimer: false,
+      rafFired: false,
       runtimeStyleLeak: false,
+      seckillRemainingSeconds: undefined,
+      timeoutFired: false,
+      ticks: 0,
     };
   }
 
@@ -53,10 +65,14 @@ export function readSandboxRiskSnapshot(): SandboxRiskSnapshot {
     clickListenerCount: risk?.clickCount ?? 0,
     globalPollution: Boolean(risk),
     leakingTimer: risk?.intervalId !== undefined,
+    rafFired: Boolean(risk?.rafFired),
     runtimeStyleLeak: Boolean(
       document.head.querySelector("[data-federlet-sandbox-risk='head-style']"),
     ),
     source: risk?.source,
+    seckillRemainingSeconds: risk?.seckillRemainingSeconds,
+    timeoutFired: Boolean(risk?.timeoutFired),
+    ticks: risk?.ticks ?? 0,
   };
 }
 
@@ -72,11 +88,29 @@ function HomePage({
 }) {
   const snapshot = readSandboxRiskSnapshot();
   const riskItems = [
-    ["window global", snapshot.globalPollution],
-    ["leaking timer", snapshot.leakingTimer],
-    ["window click listener", snapshot.clickListenerCount > 0],
-    ["body node", snapshot.bodyNodeLeak],
-    ["runtime style", snapshot.runtimeStyleLeak],
+    ["window global", snapshot.globalPollution, "Boundary: not cleaned"],
+    [
+      "active interval",
+      snapshot.leakingTimer,
+      "Sandbox should clear on unmount",
+    ],
+    [
+      "window click listener",
+      snapshot.clickListenerCount > 0,
+      "Sandbox should remove on unmount",
+    ],
+    [
+      "timeout fired",
+      snapshot.timeoutFired,
+      "Sandbox should cancel on unmount",
+    ],
+    ["raf fired", snapshot.rafFired, "Sandbox should cancel on unmount"],
+    ["body node", snapshot.bodyNodeLeak, "Boundary: DOM escape only detected"],
+    [
+      "runtime style",
+      snapshot.runtimeStyleLeak,
+      "Boundary: CSS escape only detected",
+    ],
   ] as const;
 
   return (
@@ -104,25 +138,65 @@ function HomePage({
       </div>
 
       <section className="sandbox-risk-panel">
-        <p className="eyebrow">No JS sandbox demo</p>
+        <p className="eyebrow">Sandbox comparison demo</p>
         <h2>Remote side effects visible from Shell</h2>
         <p>
-          Trigger the Risk Lab in the React remote, then return here. Any
-          detected item means the remote touched shared browser state directly.
+          Trigger the Risk Lab in React Remote, then return here. Compare
+          `/react/settings` with `/react-nosandbox/settings`: sandbox-on should
+          clean timers, raf, and window listeners after unmount; DOM and runtime
+          style escapes remain visible because they are outside the JS sandbox.
         </p>
         {snapshot.source ? <small>Last source: {snapshot.source}</small> : null}
         <dl>
-          {riskItems.map(([label, detected]) => (
+          {riskItems.map(([label, detected, note]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd className={detected ? "is-detected" : undefined}>
                 {detected ? "detected" : "clean"}
               </dd>
+              <small>{note}</small>
             </div>
           ))}
           <div>
+            <dt>interval ticks</dt>
+            <dd className={snapshot.ticks > 0 ? "is-detected" : undefined}>
+              {snapshot.ticks}
+            </dd>
+            <small>
+              With sandbox on, this should stop increasing after unmount.
+            </small>
+          </div>
+          <div>
             <dt>window click count</dt>
-            <dd>{snapshot.clickListenerCount}</dd>
+            <dd
+              className={
+                snapshot.clickListenerCount > 0 ? "is-detected" : undefined
+              }
+            >
+              {snapshot.clickListenerCount}
+            </dd>
+            <small>
+              With sandbox on, clicking Shell after unmount should not increase
+              it.
+            </small>
+          </div>
+          <div>
+            <dt>seckill countdown</dt>
+            <dd
+              className={
+                snapshot.seckillRemainingSeconds !== undefined
+                  ? "is-detected"
+                  : undefined
+              }
+            >
+              {snapshot.seckillRemainingSeconds === undefined
+                ? "not started"
+                : `${snapshot.seckillRemainingSeconds}s`}
+            </dd>
+            <small>
+              Start countdown in React/Umi remote, then leave. Sandbox-on should
+              stop this value from changing after unmount.
+            </small>
           </div>
         </dl>
       </section>
@@ -140,6 +214,7 @@ function PreloadedRemoteRoute({
   route: RemoteRouteConfig;
 }) {
   const [ready, setReady] = useState(false);
+  const sandbox = shouldDisableSandboxForRoute(route) ? false : undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +237,7 @@ function PreloadedRemoteRoute({
   return (
     <RemoteAppBoundary
       route={route}
+      sandbox={sandbox}
       createMountContext={
         eventBus ? createRemoteMountContextFactory(eventBus) : undefined
       }
@@ -182,6 +258,7 @@ export function createRemoteRouteElement(
   const createMountContext = eventBus
     ? createRemoteMountContextFactory(eventBus)
     : undefined;
+  const sandbox = shouldDisableSandboxForRoute(route) ? false : undefined;
 
   if (preloadRoute) {
     return (
@@ -198,8 +275,15 @@ export function createRemoteRouteElement(
     <RemoteAppBoundary
       key={route.id}
       route={route}
+      sandbox={sandbox}
       createMountContext={createMountContext}
     />
+  );
+}
+
+function shouldDisableSandboxForRoute(route: RemoteRouteConfig) {
+  return (
+    route.id.endsWith("-nosandbox") || route.basename.endsWith("-nosandbox")
   );
 }
 

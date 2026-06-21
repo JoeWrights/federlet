@@ -11,7 +11,11 @@ interface SandboxRiskTestWindow extends Window {
   __FEDERLET_SANDBOX_RISK__?: {
     clickCount?: number;
     intervalId?: number;
+    rafFired?: boolean;
+    seckillRemainingSeconds?: number;
     source?: string;
+    timeoutFired?: boolean;
+    ticks?: number;
   };
 }
 
@@ -32,8 +36,16 @@ vi.mock("@federlet/react-shell", () => ({
   createRemotePreloader: vi.fn(() => ({
     preload: remotePreloaderMocks.preload,
   })),
-  RemoteAppBoundary: ({ route }: { route: { title: string } }) => (
-    <section>Boundary {route.title}</section>
+  RemoteAppBoundary: ({
+    route,
+    sandbox,
+  }: {
+    route: { title: string };
+    sandbox?: false;
+  }) => (
+    <section>
+      Boundary {route.title} sandbox {sandbox === false ? "off" : "on"}
+    </section>
   ),
 }));
 
@@ -98,6 +110,32 @@ describe("createRemoteRouteElement", () => {
         mountedAt: expect.any(String),
       },
     });
+  });
+
+  it("turns off sandbox for the no-sandbox comparison route", () => {
+    const element = createRemoteRouteElement({
+      basename: "/react-nosandbox",
+      exposedModule: "./mount",
+      id: "react-dashboard-nosandbox",
+      path: "/react-nosandbox/*",
+      remoteName: "remote_react",
+      title: "React Remote No Sandbox",
+    });
+
+    expect(element.props.sandbox).toBe(false);
+  });
+
+  it("turns off sandbox for the Umi no-sandbox comparison route", () => {
+    const element = createRemoteRouteElement({
+      basename: "/umi-nosandbox",
+      exposedModule: "./mount",
+      id: "umi-react-nosandbox",
+      path: "/umi-nosandbox/*",
+      remoteName: "remote_umi_react",
+      title: "Umi React Remote No Sandbox",
+    });
+
+    expect(element.props.sandbox).toBe(false);
   });
 });
 
@@ -289,7 +327,11 @@ describe("readSandboxRiskSnapshot", () => {
     (window as SandboxRiskTestWindow).__FEDERLET_SANDBOX_RISK__ = {
       clickCount: 2,
       intervalId: 1,
+      rafFired: true,
+      seckillRemainingSeconds: 4,
       source: "remote-react/settings",
+      timeoutFired: true,
+      ticks: 3,
     };
     document.body.append(document.createElement("div"));
     document.body.lastElementChild?.setAttribute(
@@ -305,8 +347,12 @@ describe("readSandboxRiskSnapshot", () => {
       clickListenerCount: 2,
       globalPollution: true,
       leakingTimer: true,
+      rafFired: true,
       runtimeStyleLeak: true,
+      seckillRemainingSeconds: 4,
       source: "remote-react/settings",
+      timeoutFired: true,
+      ticks: 3,
     });
 
     delete (window as SandboxRiskTestWindow).__FEDERLET_SANDBOX_RISK__;

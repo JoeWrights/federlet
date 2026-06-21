@@ -309,6 +309,38 @@ describe("RemoteAppBoundary", () => {
     expect(unmount).toHaveBeenCalledOnce();
   });
 
+  it("cleans remote global side effects after unmount", async () => {
+    vi.useFakeTimers();
+    const listener = vi.fn();
+    const unmount = vi.fn();
+
+    mockedMountRemoteApp.mockImplementation(async () => {
+      window.addEventListener("click", listener);
+      window.setInterval(() => undefined, 1000);
+
+      return {
+        unmount,
+      };
+    });
+
+    await renderRemoteBoundary();
+
+    act(() => {
+      root?.unmount();
+      vi.runOnlyPendingTimers();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    window.dispatchEvent(new MouseEvent("click"));
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(unmount).toHaveBeenCalledOnce();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it("shows a timeout-specific error message and retry button", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     mockedMountRemoteApp.mockRejectedValue({
