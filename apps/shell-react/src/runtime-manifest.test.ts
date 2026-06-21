@@ -102,6 +102,50 @@ describe("loadRuntimeRemoteRoutes", () => {
     ]);
   });
 
+  it("passes the Apollo remote source policy to the registration layer", async () => {
+    const registerRemoteEntries = vi.fn();
+
+    await loadRuntimeRemoteRoutes({
+      fallbackRoutes,
+      registerRemoteEntries,
+      runtimeEnv: {
+        manifest: {
+          remotes: [
+            {
+              basename: "/react",
+              entryBaseUrl: "https://cdn.example.com/react/",
+              id: "react-dashboard",
+              path: "/react/*",
+              remoteName: "remote_react",
+              status: "active",
+              title: "React Remote",
+            },
+          ],
+        },
+        remoteSourcePolicy: {
+          allowedOrigins: ["https://cdn.example.com"],
+          enforceHttps: true,
+        },
+        runtimeEnv: "prod",
+      },
+    });
+
+    expect(registerRemoteEntries).toHaveBeenCalledWith(
+      [
+        {
+          entry: "https://cdn.example.com/react/remoteEntry.js",
+          remoteName: "remote_react",
+        },
+      ],
+      {
+        sourcePolicy: {
+          allowedOrigins: ["https://cdn.example.com"],
+          enforceHttps: true,
+        },
+      },
+    );
+  });
+
   it("normalizes entryBaseUrl without a trailing slash", async () => {
     const registerRemoteEntries = vi.fn();
 

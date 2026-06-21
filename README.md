@@ -54,6 +54,7 @@ pnpm dev:vite
 
 - [阶段一架构文档](docs/architecture-stage-1.md)
 - [跨应用事件总线规范化](docs/event-bus-governance.md)
+- [CSP 和 Remote 加载来源治理](docs/remote-source-security-governance.md)
 
 ## 微应用接入协议
 

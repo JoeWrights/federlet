@@ -150,12 +150,31 @@ export interface FederletRuntimeEnvironment {
   /** Apollo 直接注入的 remote manifest。 */
   manifest?: RuntimeRemoteManifest;
 
+  /** remoteEntry 来源治理策略。 */
+  remoteSourcePolicy?: RemoteSourcePolicy;
 }
 
 /**
  * remoteEntry 的运行时加载格式。
  */
 export type RemoteEntryType = "module" | "var";
+
+/**
+ * remoteEntry 来源治理策略。
+ */
+export interface RemoteSourcePolicy {
+  /** 允许加载 remoteEntry 的 origin，例如 `https://remote-cdn.example.com`。 */
+  allowedOrigins?: string[];
+
+  /** 允许加载的 remoteEntry 完整 URL，用于灰度、回滚或单版本白名单。 */
+  allowedEntryUrls?: string[];
+
+  /** 是否允许本地开发来源，例如 localhost、127.0.0.1 和 ::1。 */
+  allowLocalhost?: boolean;
+
+  /** 是否要求非本地 remoteEntry 使用 HTTPS。 */
+  enforceHttps?: boolean;
+}
 
 /**
  * manifest 中声明的单个 remote。

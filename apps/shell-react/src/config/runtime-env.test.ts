@@ -52,6 +52,15 @@ describe("runtime environment config", () => {
           },
         ],
       },
+      remoteSourcePolicy: {
+        allowLocalhost: false,
+        allowedOrigins: [
+          "http://localhost:3001",
+          "http://localhost:3002",
+          "http://localhost:3003",
+        ],
+        enforceHttps: true,
+      },
       runtimeEnv: "local",
     });
   });

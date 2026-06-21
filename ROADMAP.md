@@ -78,8 +78,8 @@
 - [x] 老项目兼容策略：例如 Umi React 17 不共享 React runtime，见 `docs/shared-runtime-strategy.md`。
 - [ ] 权限模型：Shell 统一下发用户、权限、租户等上下文。
 - [ ] remote 权限边界：remote 不直接读取全局敏感状态。
-- [ ] CSP 和脚本来源治理。
-- [ ] remote 加载来源校验。
+- [x] CSP 和脚本来源治理：见 `docs/remote-source-security-governance.md`。
+- [x] remote 加载来源校验：`@federlet/mf-runtime` 在注册 remoteEntry 前按来源策略阻断不受信 URL。
 
 ## 阶段五：开发者体验
 

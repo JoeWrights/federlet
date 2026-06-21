@@ -2,10 +2,14 @@ import { registerRuntimeRemoteEntries } from "./runtime-remotes";
 import type {
   RemoteEntryType,
   RemoteRouteConfig,
+  RemoteSourcePolicy,
   RuntimeRemoteManifest,
   RuntimeRemoteManifestItem,
 } from "@federlet/shared-types";
-import type { RuntimeRemoteEntry } from "./runtime-remotes";
+import type {
+  RegisterRuntimeRemoteEntriesOptions,
+  RuntimeRemoteEntry,
+} from "./runtime-remotes";
 
 /**
  * 默认的 remote 暴露模块名，用于 fallback 静态配置。
@@ -139,7 +143,10 @@ export interface BootstrapRuntimeRemoteRegistryOptions {
   /**
    * 注册远程入口的函数。
    */
-  registerRemoteEntries?: (entries: RuntimeRemoteEntry[]) => void | Promise<void>;
+  registerRemoteEntries?: (
+    entries: RuntimeRemoteEntry[],
+    options?: RegisterRuntimeRemoteEntriesOptions,
+  ) => void | Promise<void>;
   /**
    * 注册表。
    */
@@ -148,6 +155,10 @@ export interface BootstrapRuntimeRemoteRegistryOptions {
    * 运行时环境。
    */
   runtimeEnv?: string;
+  /**
+   * remoteEntry 来源治理策略。
+   */
+  sourcePolicy?: RemoteSourcePolicy;
   /**
    * Shell 协议版本。
    */
@@ -450,6 +461,7 @@ export async function bootstrapRuntimeRemoteRegistry({
   registry = runtimeRemoteRegistry,
   runtimeEnv,
   shellProtocolVersion,
+  sourcePolicy,
 }: BootstrapRuntimeRemoteRegistryOptions): Promise<RemoteRouteConfig[]> {
   registry.clear();
 
@@ -473,16 +485,24 @@ export async function bootstrapRuntimeRemoteRegistry({
   registry.registerMany(definitions);
 
   try {
-    await registerRemoteEntries(
-      definitions
-        .filter((definition) => definition.entry)
-        .map((definition) => ({
-          entry: definition.entry as string,
-          entryGlobalName: definition.entryGlobalName,
-          remoteEntryType: definition.remoteEntryType,
-          remoteName: definition.remoteName,
-        })),
-    );
+    const remoteEntries = definitions
+      .filter((definition) => definition.entry)
+      .map((definition) => ({
+        entry: definition.entry as string,
+        ...(definition.entryGlobalName
+          ? { entryGlobalName: definition.entryGlobalName }
+          : {}),
+        ...(definition.remoteEntryType
+          ? { remoteEntryType: definition.remoteEntryType }
+          : {}),
+        remoteName: definition.remoteName,
+      }));
+
+    if (sourcePolicy) {
+      await registerRemoteEntries(remoteEntries, { sourcePolicy });
+    } else {
+      await registerRemoteEntries(remoteEntries);
+    }
   } catch (error) {
     for (const definition of definitions) {
       registry.updateHealth(definition.remoteName, {

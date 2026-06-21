@@ -66,5 +66,14 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
       // },
     ],
   },
+  remoteSourcePolicy: {
+    allowLocalhost: false,
+    allowedOrigins: [
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+    ],
+    enforceHttps: true,
+  },
   runtimeEnv: DEFAULT_RUNTIME_ENV,
 };

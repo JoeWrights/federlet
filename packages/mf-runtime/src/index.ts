@@ -27,7 +27,15 @@ export {
   type RemoteRetryOptions,
 } from "./loader";
 export {
+  RemoteSourcePolicyError,
+  assertRemoteEntrySourceAllowed,
+  validateRemoteEntrySource,
+  type RemoteSourcePolicyErrorCode,
+  type RemoteSourcePolicyValidationResult,
+} from "./remote-source-policy";
+export {
   registerRuntimeRemoteEntries,
+  type RegisterRuntimeRemoteEntriesOptions,
   type RuntimeRemoteEntry,
 } from "./runtime-remotes";
 export {

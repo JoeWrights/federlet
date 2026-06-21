@@ -30,9 +30,30 @@ export function injectRuntimeEnvironment(
   target: RuntimeEnvironmentTarget,
   localRuntimeEnv: FederletRuntimeEnvironment = createLocalRuntimeEnvironment(),
 ) {
+  const injectedRuntimeEnv = target[FEDERLET_GLOBAL_ENV_KEY];
+
+  if (injectedRuntimeEnv) {
+    const {
+      remoteSourcePolicy: localRemoteSourcePolicy,
+      ...localRuntimeEnvWithoutSourcePolicy
+    } = localRuntimeEnv;
+    const remoteSourcePolicy =
+      injectedRuntimeEnv.remoteSourcePolicy ??
+      (injectedRuntimeEnv.runtimeEnv
+        ? undefined
+        : localRemoteSourcePolicy);
+
+    target[FEDERLET_GLOBAL_ENV_KEY] = {
+      ...localRuntimeEnvWithoutSourcePolicy,
+      ...injectedRuntimeEnv,
+      ...(remoteSourcePolicy ? { remoteSourcePolicy } : {}),
+    };
+
+    return target[FEDERLET_GLOBAL_ENV_KEY];
+  }
+
   target[FEDERLET_GLOBAL_ENV_KEY] = {
     ...localRuntimeEnv,
-    ...target[FEDERLET_GLOBAL_ENV_KEY],
   };
 
   return target[FEDERLET_GLOBAL_ENV_KEY];

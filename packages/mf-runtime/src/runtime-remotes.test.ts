@@ -127,4 +127,85 @@ describe("registerRuntimeRemoteEntries", () => {
       { force: true },
     );
   });
+
+  it("rejects remote entries from untrusted origins before registering them", async () => {
+    await expect(
+      registerRuntimeRemoteEntries(
+        [
+          {
+            entry: "https://evil.example.com/orders/remoteEntry.js",
+            remoteName: "remote_orders",
+          },
+        ],
+        {
+          sourcePolicy: {
+            allowedOrigins: ["https://cdn.example.com"],
+            enforceHttps: true,
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "REMOTE_SOURCE_NOT_ALLOWED",
+      entry: "https://evil.example.com/orders/remoteEntry.js",
+      remoteName: "remote_orders",
+    });
+
+    expect(mockedRegisterRemotes).not.toHaveBeenCalled();
+  });
+
+  it("allows localhost remotes only when the source policy permits local development", async () => {
+    vi.stubGlobal("fetch", undefined);
+
+    await registerRuntimeRemoteEntries(
+      [
+        {
+          entry: "http://localhost:3001/remoteEntry.js",
+          remoteName: "remote_react",
+        },
+      ],
+      {
+        sourcePolicy: {
+          allowLocalhost: true,
+          allowedOrigins: [],
+          enforceHttps: true,
+        },
+      },
+    );
+
+    expect(mockedRegisterRemotes).toHaveBeenCalledWith(
+      [
+        {
+          entry: "http://localhost:3001/remoteEntry.js",
+          name: "remote_react",
+        },
+      ],
+      { force: true },
+    );
+  });
+
+  it("rejects localhost remotes that are not listed when broad localhost access is disabled", async () => {
+    await expect(
+      registerRuntimeRemoteEntries(
+        [
+          {
+            entry: "http://localhost:3999/remoteEntry.js",
+            remoteName: "remote_unknown",
+          },
+        ],
+        {
+          sourcePolicy: {
+            allowLocalhost: false,
+            allowedOrigins: ["http://localhost:3001"],
+            enforceHttps: true,
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "REMOTE_SOURCE_NOT_ALLOWED",
+      entry: "http://localhost:3999/remoteEntry.js",
+      remoteName: "remote_unknown",
+    });
+
+    expect(mockedRegisterRemotes).not.toHaveBeenCalled();
+  });
 });

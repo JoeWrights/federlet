@@ -46,6 +46,8 @@ function getRuntimeEnvironment(): FederletRuntimeEnvironment {
 
 /**
  * 校验值是否为对象。
+ * @param route - 路由配置。
+ * @returns 路由配置。
  */
 function toRemoteRoute(route: RemoteRouteConfig): RemoteRouteConfig {
   return {
@@ -58,6 +60,11 @@ function toRemoteRoute(route: RemoteRouteConfig): RemoteRouteConfig {
   };
 }
 
+/**
+ * 从 manifest 创建远程路由配置。
+ * @param manifest - manifest 配置。
+ * @returns 远程路由配置。
+ */
 export function createRemoteRoutesFromManifest(
   manifest: RuntimeRemoteManifest,
 ): RemoteRouteConfig[] {
@@ -82,6 +89,7 @@ export async function loadRuntimeRemoteRoutes({
     manifest: runtimeEnv.manifest,
     registerRemoteEntries,
     runtimeEnv: runtimeEnv.runtimeEnv,
+    sourcePolicy: runtimeEnv.remoteSourcePolicy,
     shellProtocolVersion: SHELL_REMOTE_PROTOCOL_VERSION,
   });
 }

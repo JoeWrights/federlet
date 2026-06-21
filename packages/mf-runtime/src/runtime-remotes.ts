@@ -1,11 +1,16 @@
 import { registerRemotes } from "@module-federation/enhanced/runtime";
-import type { RemoteEntryType } from "@federlet/shared-types";
+import type { RemoteEntryType, RemoteSourcePolicy } from "@federlet/shared-types";
+import { assertRemoteEntrySourceAllowed } from "./remote-source-policy";
 
 export interface RuntimeRemoteEntry {
   remoteName: string;
   entry: string;
   remoteEntryType?: RemoteEntryType;
   entryGlobalName?: string;
+}
+
+export interface RegisterRuntimeRemoteEntriesOptions {
+  sourcePolicy?: RemoteSourcePolicy;
 }
 
 interface RuntimeRemoteRegistration {
@@ -57,9 +62,20 @@ async function toRuntimeRemoteRegistration(
  *
  * `force: true` 确保 Apollo/manifest 切换版本后，Shell 使用最新入口。
  */
-export async function registerRuntimeRemoteEntries(entries: RuntimeRemoteEntry[]) {
+export async function registerRuntimeRemoteEntries(
+  entries: RuntimeRemoteEntry[],
+  options: RegisterRuntimeRemoteEntriesOptions = {},
+) {
   if (entries.length === 0) {
     return;
+  }
+
+  for (const entry of entries) {
+    assertRemoteEntrySourceAllowed(
+      entry.remoteName,
+      entry.entry,
+      options.sourcePolicy,
+    );
   }
 
   const remotes = await Promise.all(entries.map(toRuntimeRemoteRegistration));
