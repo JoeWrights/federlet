@@ -25,13 +25,13 @@ globalThis.bar = "remote";
 Array.prototype.extra = "polluted";
 ```
 
-这些写入在 remote 挂载期间仍会落到真实宿主环境上。当前短期方案已经补了 `window` 属性快照恢复，因此新增或改写的 `window` 自有属性会在最后一个 sandbox 卸载后回滚，但运行期间仍不是隔离的。
+这些写入在 remote 挂载期间仍会落到真实宿主环境上。曾经尝试过通过 `window` 属性快照恢复在最后一个 sandbox 卸载后回滚新增或改写的 `window` 自有属性，但该方案已经确认会误删大量构建器和 Module Federation 运行时全局，现阶段不应作为默认能力启用。
 
 ## 当前沙箱防不住的典型场景
 
-以下场景目前只能被 demo 检测到，不能被当前沙箱完整隔离；其中 `window` 自有属性写入已经具备卸载后的快照恢复能力：
+以下场景目前只能被 demo 检测到，不能被当前沙箱完整隔离；其中 `window` 自有属性写入暂不建议通过全量快照恢复治理：
 
-- remote 直接写 `window.foo = ...`：运行时不隔离，但最后一个 sandbox 卸载后会快照恢复。
+- remote 直接写 `window.foo = ...`：运行时不隔离；全量快照恢复存在误删运行时全局风险，现阶段默认关闭。
 - remote 直接改 `document.body`、`document.head`。
 - remote 动态插入 `style`、`link`、`script`。
 - remote 写入 `localStorage`、`sessionStorage`、`cookie`。
@@ -41,7 +41,7 @@ Array.prototype.extra = "polluted";
 
 ## window 属性快照恢复
 
-`window` 属性快照恢复是“事后治理”方案，当前已在 `@federlet/sandbox` 中实现。
+`window` 属性快照恢复是“事后治理”方案，当前在 `@federlet/sandbox` 中有实验性实现，但现阶段不建议默认启用。
 
 基本思路：
 
@@ -54,7 +54,7 @@ Array.prototype.extra = "polluted";
 
 - 避免 `window.foo = ...` 这类污染在所有 sandbox 卸载后继续留在 Shell。
 - 接入成本较低，不需要重构 remote 加载/执行链路。
-- 可以作为强隔离方案之前的低风险增强。
+- 可以作为调试手段，用来确认某个 remote 是否存在直接 `window` 污染。
 
 它不能解决的问题是：
 
@@ -63,8 +63,21 @@ Array.prototype.extra = "polluted";
 - 多 remote 并发时，为避免一个 remote 卸载误删另一个仍运行 remote 的属性，当前在最后一个 sandbox 卸载后统一恢复。
 - 对复杂对象内部变更无能为力，例如 `window.someObject.deep = ...`。
 - 对原型链污染、storage/cookie、DOM/head 节点污染没有天然治理能力。
+- 会误删或回滚构建器、Module Federation 和 dev runtime 在 `window` / `self` 上新增的运行时全局属性。
+- 运行时全局命名不稳定，无法长期依赖黑名单完整保护。
 
-因此，快照恢复适合作为 Federlet 当前阶段的补救型防污染能力，但不能称为真正的运行时隔离。
+已经确认会被误删或需要特殊保护的运行时全局包括：
+
+- `__FEDERATION__`
+- `webpackChunk*`
+- `webpackHotUpdate*`
+- `__webpack*`
+- `remote_*`
+- `chunk_*`
+
+其中 `chunk_*` 是 Rsbuild/Rspack async chunk JSONP 运行时常见全局，例如 `chunk_remote_vue`。一旦被删除，后续 remote 异步 chunk 可能出现 `ChunkLoadError`。类似地，Webpack、Vite、React Refresh、Vue HMR、Module Federation runtime 也可能在 dev 模式写入额外全局，快照恢复很容易把这些全局误判成 remote 污染。
+
+因此，快照恢复最多只能作为实验性诊断能力，不能作为 Federlet 当前阶段的默认补救型防污染能力，也不能称为真正的运行时隔离。当前更稳妥的方向是：默认关闭全量快照恢复，优先通过诊断、remote key 命名规范、显式白名单和未来的执行上下文 Proxy 化治理直接 `window` 写入。几种方向的详细对比见 `docs/window-global-governance-options.md`。
 
 ## 执行上下文 Proxy 化
 
@@ -102,11 +115,13 @@ Proxy 执行上下文：防止污染“运行时发生”
 
 快照恢复是补救，Proxy 化是隔离。
 
-即使未来 Federlet 做了真正的 Proxy 执行上下文，快照恢复仍然有价值，可以作为兜底能力，用来处理：
+即使未来 Federlet 做了真正的 Proxy 执行上下文，快照恢复也只能谨慎作为调试或极小范围兜底能力，用来处理：
 
 - 白名单同步变量。
 - 第三方库绕过 proxy 的逃逸写入。
-- 执行链路外发生的全局污染。
+- 执行链路外发生、且 key 空间明确可归属 remote 的全局污染。
+
+不应再采用“扫描整个 `window` 并删除所有非基线属性”的默认策略。
 
 ## lego-sandbox 的参考价值
 
@@ -155,10 +170,10 @@ Object.prototype.__risk__ = "polluted";
 
 建议 Federlet 分阶段演进，而不是一次性追求强隔离：
 
-1. **已完成：补 window 属性快照恢复。**
-   - 第一个 sandbox activate 前记录真实 `window`。
-   - 最后一个 sandbox deactivate 后清理新增属性，恢复被改属性。
-   - 作为当前副作用治理沙箱的自然增强。
+1. **暂缓默认启用 window 属性快照恢复。**
+   - 全量 `window` 快照恢复会误删 Module Federation、Webpack/Rspack/Rsbuild/Vite、HMR 等运行时全局。
+   - 当前仅保留为实验性诊断能力，不作为默认沙箱能力。
+   - 后续若恢复该能力，应改成 remote 自有 key 空间治理、显式白名单或 opt-in 模式，而不是全局扫描删除。
 
 2. **短期：继续完善 DOM/head 节点检测与清理。**
    - 对明确由 remote 创建的 `style`、`link`、`script`、body portal 节点做标记和清理。
@@ -178,6 +193,6 @@ Object.prototype.__risk__ = "polluted";
 
 ## 总结
 
-Federlet 当前沙箱已经能解决 remote 生命周期中的常见全局副作用清理问题，并已能在卸载后回滚 `window` 自有属性新增和改写。但它仍不能在运行期间隔离 `window.xxx` 写入，也不能完整防止 DOM/head、storage/cookie、prototype 这类污染。
+Federlet 当前沙箱已经能解决 remote 生命周期中的常见全局副作用清理问题，但现阶段不应默认依赖 `window` 属性快照恢复来回滚 `window` 自有属性新增和改写。该方案会误删大量运行时全局属性，导致 remote 加载、异步 chunk、HMR 或 Module Federation runtime 异常。它仍不能在运行期间隔离 `window.xxx` 写入，也不能完整防止 DOM/head、storage/cookie、prototype 这类污染。
 
-下一步更务实的增强是继续做 DOM/head 节点追踪清理与 storage/cookie 命名空间治理；`window` 属性快照恢复与未来的执行上下文 Proxy 化不冲突，反而可以作为后者的兜底层。
+下一步更务实的增强是继续做 DOM/head 节点追踪清理、storage/cookie 命名空间治理和执行上下文 Proxy 化评估；`window` 属性快照恢复只能在 key 空间明确、风险可控的场景下作为调试或 opt-in 兜底层。

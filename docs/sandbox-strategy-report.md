@@ -4,7 +4,7 @@ description: "评估 lego-sandbox 是否适合作为 Federlet 的沙箱实现。
 category: "design"
 number: "007"
 status: draft
-last_modified: "2026-06-18"
+last_modified: "2026-06-22"
 ---
 
 # Federlet 沙箱策略评估报告
@@ -202,6 +202,44 @@ document.documentElement.classList.add("remote-global-class");
 ### CSS-in-JS 与动态样式仍可能泄漏
 
 styled-components、emotion、style-loader 或第三方组件库动态注入的 `<style>` 不会被 `lego-sandbox` 追踪和重建。Federlet 需要继续依赖构建期样式隔离、组件库配置和 DOM 逃逸检测。
+
+### window 属性快照恢复会误删运行时全局
+
+`windowPropertySnapshotManager` 试图通过“首个 sandbox 激活前记录 `window` 自有属性，最后一个 sandbox 释放后恢复快照”的方式治理 remote 直接写入：
+
+```ts
+window.foo = "remote";
+```
+
+这个方向只能解决“卸载后污染残留”，不能提供运行期间隔离。更重要的是，现阶段的全量快照恢复方案已经确认存在较高误删风险：Module Federation、Webpack、Rspack、Rsbuild、Vite、Vue/React dev runtime 都会在 `window` / `self` 上维护运行时全局属性，这些属性不一定在 sandbox 激活前存在，也不一定有稳定命名规则。
+
+如果快照恢复把这些运行时全局当成 remote 污染删除或恢复成旧值，会直接破坏后续 remote 加载和 chunk 执行。已遇到或高度相关的异常包括：
+
+- `ChunkLoadError`，尤其是 Rsbuild/Rspack 的 async chunk callback 全局被删除。
+- `RUNTIME-001: Failed to get remoteEntry exports`。
+- `remoteEntry exports is undefined`。
+- Webpack/Rspack/Rsbuild 的 `webpackChunk*`、`chunk_*`、`remote_*`、`__webpack*` 等运行时全局被误删。
+- Vue/React dev runtime、HMR、Module Federation runtime 状态被破坏，表现为切换 remote 后报错，刷新后恢复。
+
+虽然当前实现里已经尝试跳过一些平台运行时 key：
+
+```ts
+__FEDERATION__
+webpackChunk*
+webpackHotUpdate*
+__webpack*
+remote_*
+chunk_*
+```
+
+但这只是黑名单式补丁，无法覆盖所有构建器、插件、dev runtime 和未来版本新增的全局。随着 remote 类型、构建器和 dev 模式增多，这个名单会持续膨胀，仍然可能漏掉新的运行时全局。
+
+因此，现阶段不建议默认启用全量 `window` 属性快照恢复。当前更稳妥的策略是：
+
+1. 将 `windowPropertySnapshotManager` 视为实验性能力，默认关闭。
+2. 仅在可控 demo 或调试场景临时开启，用于验证某个 remote 是否有直接 `window.foo = ...` 污染。
+3. 长期不要依赖“扫描并恢复整个 window”作为主方案，而应收敛到更明确的 remote 自有 key 空间、诊断告警、白名单治理，或真正的执行上下文 Proxy 化；详细对比见 `docs/window-global-governance-options.md`。
+4. 对 Module Federation / bundler / HMR 运行时全局必须默认信任和保护，不能把它们当作 remote 污染清理对象。
 
 ### 不是安全沙箱
 
