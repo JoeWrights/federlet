@@ -182,6 +182,8 @@ Object.prototype.__risk__ = "polluted";
 3. **中期：评估执行上下文 Proxy 化。**
    - 参考 `lego-sandbox` 的 membrane 设计。
    - 结合 Module Federation 加载链路设计 Federlet 自己的 proxy global 接入方式。
+   - 当前结论：可做 POC 和部分治理，但不适合作为默认生产沙箱；完整方案必须同时改造 `@federlet/sandbox`、`@federlet/mf-runtime`、Shell preload 策略和 remote mount context，不能只在 sandbox 包内完成。
+   - 详细方案见 `docs/proxy-global-feasibility.md`。
 
 4. **中期：storage/cookie 命名空间治理。**
    - 默认先做 key namespace 规范和诊断。

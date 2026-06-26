@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { setTimeout as waitForNodeTimer } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -100,12 +101,18 @@ describe("reportRemoteDomEscapes", () => {
 
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Remote remote_react created DOM outside its container during mount",
+        "shell-core:remote.dom.escape Remote created DOM outside its container",
       ),
       expect.objectContaining({
-        node,
-        phase: "mount",
-        reason: "node-outside-remote-container",
+        context: expect.objectContaining({
+          issue: expect.objectContaining({
+            node,
+            phase: "mount",
+            reason: "node-outside-remote-container",
+            remoteName: "remote_react",
+          }),
+        }),
+        event: "remote.dom.escape",
         remoteName: "remote_react",
       }),
     );
@@ -155,11 +162,21 @@ describe("createRemotePreloader", () => {
 
 describe("RemoteAppBoundary", () => {
   let root: Root | null = null;
+  let usingFakeTimers = false;
 
-  afterEach(() => {
+  afterEach(async () => {
     act(() => {
       root?.unmount();
     });
+    if (usingFakeTimers) {
+      act(() => {
+        vi.runOnlyPendingTimers();
+      });
+      usingFakeTimers = false;
+    } else {
+      await waitForNodeTimer(0);
+    }
+    await Promise.resolve();
     root = null;
     document.body.innerHTML = "";
     mockedMountRemoteApp.mockReset();
@@ -167,6 +184,11 @@ describe("RemoteAppBoundary", () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
+
+  function useFakeTimersForTest() {
+    usingFakeTimers = true;
+    vi.useFakeTimers();
+  }
 
   async function renderRemoteBoundary(
     props: Partial<Parameters<typeof RemoteAppBoundary>[0]> = {},
@@ -205,12 +227,18 @@ describe("RemoteAppBoundary", () => {
       .toBe("ready");
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Remote remote_react created DOM outside its container during mount",
+        "shell-core:remote.dom.escape Remote created DOM outside its container",
       ),
       expect.objectContaining({
-        node: leakedNode,
-        phase: "mount",
-        reason: "node-outside-remote-container",
+        context: expect.objectContaining({
+          issue: expect.objectContaining({
+            node: leakedNode,
+            phase: "mount",
+            reason: "node-outside-remote-container",
+            remoteName: "remote_react",
+          }),
+        }),
+        event: "remote.dom.escape",
         remoteName: "remote_react",
       }),
     );
@@ -262,7 +290,7 @@ describe("RemoteAppBoundary", () => {
   });
 
   it("shows the fallback and unmounts when a mounted remote reports a runtime error", async () => {
-    vi.useFakeTimers();
+    useFakeTimersForTest();
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -298,8 +326,15 @@ describe("RemoteAppBoundary", () => {
     );
     expect(onError).toHaveBeenCalledWith(remoteRuntimeError, route);
     expect(consoleError).toHaveBeenCalledWith(
-      "Remote remote_react reported a runtime error",
-      remoteRuntimeError,
+      expect.stringContaining(
+        "react-shell:remote.runtime.error Remote reported a runtime error",
+      ),
+      expect.objectContaining({
+        error: remoteRuntimeError,
+        event: "remote.runtime.error",
+        remoteName: "remote_react",
+        routeId: "react-dashboard",
+      }),
     );
 
     act(() => {
@@ -310,7 +345,7 @@ describe("RemoteAppBoundary", () => {
   });
 
   it("cleans remote global side effects after unmount", async () => {
-    vi.useFakeTimers();
+    useFakeTimersForTest();
     const listener = vi.fn();
     const unmount = vi.fn();
 

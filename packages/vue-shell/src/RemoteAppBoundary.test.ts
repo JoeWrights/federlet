@@ -102,12 +102,18 @@ describe("reportRemoteDomEscapes", () => {
 
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Remote remote_vue created DOM outside its container during mount",
+        "shell-core:remote.dom.escape Remote created DOM outside its container",
       ),
       expect.objectContaining({
-        node,
-        phase: "mount",
-        reason: "node-outside-remote-container",
+        context: expect.objectContaining({
+          issue: expect.objectContaining({
+            node,
+            phase: "mount",
+            reason: "node-outside-remote-container",
+            remoteName: "remote_vue",
+          }),
+        }),
+        event: "remote.dom.escape",
         remoteName: "remote_vue",
       }),
     );
@@ -325,8 +331,15 @@ describe("RemoteAppBoundary", () => {
     );
     expect(onError).toHaveBeenCalledWith(remoteRuntimeError, route);
     expect(consoleError).toHaveBeenCalledWith(
-      "Remote remote_vue reported a runtime error",
-      remoteRuntimeError,
+      expect.stringContaining(
+        "vue-shell:remote.runtime.error Remote reported a runtime error",
+      ),
+      expect.objectContaining({
+        error: remoteRuntimeError,
+        event: "remote.runtime.error",
+        remoteName: "remote_vue",
+        routeId: "vue-analytics",
+      }),
     );
 
     vi.advanceTimersByTime(0);
