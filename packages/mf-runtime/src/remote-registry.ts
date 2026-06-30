@@ -1,9 +1,11 @@
 import { federletLogger } from "./logger";
 import { registerRuntimeRemoteEntries } from "./runtime-remotes";
 import type {
+  RemoteComponentManifestItem,
   RemoteEntryType,
   RemoteRouteConfig,
   RemoteSourcePolicy,
+  RuntimeRemoteComponent,
   RuntimeRemoteManifest,
   RuntimeRemoteManifestItem,
 } from "@federlet/shared-types";
@@ -53,6 +55,10 @@ export interface RuntimeRemoteHealth {
  * 远程应用定义。
  */
 export interface RuntimeRemoteDefinition extends RemoteRouteConfig {
+  /**
+   * remote 对外暴露的组件清单。
+   */
+  components?: RemoteComponentManifestItem[];
   /**
    * 远程入口。
    */
@@ -115,6 +121,17 @@ export interface RuntimeRemoteRegistry {
    * 根据路由 ID 获取记录。
    */
   getByRouteId(routeId: string): RuntimeRemoteRecord | undefined;
+  /**
+   * 根据远程应用名称和组件名称获取组件。
+   */
+  getComponent(
+    remoteName: string,
+    componentName: string,
+  ): RuntimeRemoteComponent | undefined;
+  /**
+   * 列出组件清单。
+   */
+  listComponents(remoteName?: string): RuntimeRemoteComponent[];
   /**
    * 列出所有路由。
    */
@@ -202,9 +219,29 @@ function toRemoteRoute(route: RuntimeRemoteDefinition): RemoteRouteConfig {
 function cloneRecord(record: RuntimeRemoteRecord): RuntimeRemoteRecord {
   return {
     ...record,
+    ...(record.components
+      ? {
+          components: record.components.map((component) => ({ ...component })),
+        }
+      : {}),
     health: {
       ...record.health,
     },
+  };
+}
+
+function createRemoteComponentModuleName(remoteName: string, expose: string) {
+  return `${remoteName}/${expose.replace(/^\.\//, "")}`;
+}
+
+function toRuntimeRemoteComponent(
+  remoteName: string,
+  component: RemoteComponentManifestItem,
+): RuntimeRemoteComponent {
+  return {
+    ...component,
+    moduleName: createRemoteComponentModuleName(remoteName, component.expose),
+    remoteName,
   };
 }
 
@@ -245,6 +282,39 @@ export function createRuntimeRemoteRegistry(
       const remoteName = routeIdToRemoteName.get(routeId);
 
       return remoteName ? this.getByName(remoteName) : undefined;
+    },
+    /**
+     * 根据远程应用名称和组件名称获取组件。
+     * @param remoteName - 远程应用名称。
+     * @param componentName - 组件名称。
+     * @returns 组件定义。
+     */
+    getComponent(remoteName, componentName) {
+      const record = recordsByName.get(remoteName);
+      const component = record?.components?.find(
+        (item) => item.name === componentName,
+      );
+
+      return component
+        ? toRuntimeRemoteComponent(remoteName, component)
+        : undefined;
+    },
+    /**
+     * 列出组件清单。
+     * @param remoteName - 可选远程应用名称。
+     */
+    listComponents(remoteName) {
+      const records = remoteName
+        ? [...recordsByName.values()].filter(
+            (record) => record.remoteName === remoteName,
+          )
+        : [...recordsByName.values()];
+
+      return records.flatMap((record) =>
+        (record.components ?? []).map((component) =>
+          toRuntimeRemoteComponent(record.remoteName, component),
+        ),
+      );
     },
     /**
      * 列出所有路由。
@@ -303,6 +373,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isRemoteComponentFramework(value: unknown) {
+  return (
+    value === "react" ||
+    value === "vue" ||
+    value === "web-component" ||
+    value === "unknown"
+  );
+}
+
+/**
+ * 判断是否为 manifest 组件。
+ * @param value - 值。
+ * @returns 是否为 manifest 组件。
+ */
+function isManifestComponent(value: unknown): value is RemoteComponentManifestItem {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.name === "string" &&
+    typeof value.expose === "string" &&
+    (value.framework === undefined ||
+      isRemoteComponentFramework(value.framework)) &&
+    (value.exportName === undefined || typeof value.exportName === "string") &&
+    (value.contractVersion === undefined ||
+      typeof value.contractVersion === "string") &&
+    (value.typePackage === undefined || typeof value.typePackage === "string") &&
+    (value.description === undefined || typeof value.description === "string") &&
+    (value.meta === undefined || isRecord(value.meta))
+  );
+}
+
 /**
  * 判断是否为 manifest 远程。
  * @param value - 值。
@@ -318,6 +421,9 @@ function isManifestRemote(value: unknown): value is RuntimeRemoteManifestItem {
     typeof value.path === "string" &&
     typeof value.title === "string" &&
     typeof value.remoteName === "string" &&
+    (value.components === undefined ||
+      (Array.isArray(value.components) &&
+        value.components.every(isManifestComponent))) &&
     (value.exposedModule === undefined ||
       typeof value.exposedModule === "string") &&
     typeof value.basename === "string" &&
@@ -442,6 +548,11 @@ export function createRemoteDefinitionsFromManifest(
   return getCompatibleManifestRemotes(manifest, shellProtocolVersion).map(
     (remote) => ({
       basename: remote.basename,
+      ...(remote.components
+        ? {
+            components: remote.components.map((component) => ({ ...component })),
+          }
+        : {}),
       entry: remote.entry ?? createRemoteEntryUrl(remote.entryBaseUrl),
       entryGlobalName: remote.entryGlobalName,
       exposedModule: remote.exposedModule ?? DEFAULT_REMOTE_EXPOSED_MODULE,

@@ -9,6 +9,7 @@ export default createReactRemoteConfig({
   name: "remote_react",
   port: 3001,
   exposes: {
+    "./components/SettingsPage": "./src/pages/SettingsPage.tsx",
     "./mount": "./src/mount.tsx",
   },
 });

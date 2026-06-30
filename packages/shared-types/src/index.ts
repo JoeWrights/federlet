@@ -181,6 +181,9 @@ export interface RemoteSourcePolicy {
  */
 export interface RuntimeRemoteManifestItem
   extends Omit<RemoteRouteConfig, "exposedModule"> {
+  /** remote 对外暴露的组件清单，用于其他 remote 或 Shell 发现可消费组件。 */
+  components?: RemoteComponentManifestItem[];
+
   /** remote 暴露模块名，默认约定为 `./mount`。 */
   exposedModule?: string;
 
@@ -211,6 +214,51 @@ export interface RuntimeRemoteManifestItem
  */
 export interface RuntimeRemoteManifest {
   remotes: RuntimeRemoteManifestItem[];
+}
+
+/**
+ * remote 暴露组件所属的运行时框架。
+ */
+export type RemoteComponentFramework = "react" | "vue" | "web-component" | "unknown";
+
+/**
+ * remote manifest 中声明的可消费组件。
+ */
+export interface RemoteComponentManifestItem {
+  /** 面向消费方的稳定组件名称，在同一个 remote 内唯一。 */
+  name: string;
+
+  /** Module Federation 暴露模块名，例如 `./components/Button`。 */
+  expose: string;
+
+  /** 组件运行时框架，用于消费方判断是否能直接渲染。 */
+  framework?: RemoteComponentFramework;
+
+  /** 组件模块中的导出名；未声明时消费方通常使用 default export。 */
+  exportName?: string;
+
+  /** 组件契约版本，通常对应类型包或 props 协议的 semver 范围。 */
+  contractVersion?: string;
+
+  /** 提供组件 props/types 的 npm 或 workspace 包名。 */
+  typePackage?: string;
+
+  /** 面向开发者或组件目录展示的简短说明。 */
+  description?: string;
+
+  /** 业务扩展元数据，例如 owner、tags、designNodeId。 */
+  meta?: Record<string, unknown>;
+}
+
+/**
+ * runtime registry 展开的组件定义。
+ */
+export interface RuntimeRemoteComponent extends RemoteComponentManifestItem {
+  /** Module Federation 中注册的 remote 名称。 */
+  remoteName: string;
+
+  /** Module Federation runtime 可直接加载的模块名，例如 `remote_ui/components/Button`。 */
+  moduleName: string;
 }
 
 /**

@@ -16,6 +16,14 @@ export {
   type RemoteDebugSnapshotItem,
 } from "./debug";
 export {
+  defaultRemoteComponentLoader,
+  getRemoteComponent,
+  listRemoteComponents,
+  loadRemoteComponent,
+  type RemoteComponentDiscoveryOptions,
+  type RemoteComponentLoader,
+} from "./remote-components";
+export {
   createCircuitBreakerStore,
   defaultRemoteLoader,
   mountRemoteApp,

@@ -23,6 +23,15 @@ const manifest: RuntimeRemoteManifest = {
   remotes: [
     {
       basename: "/react",
+      components: [
+        {
+          contractVersion: "^1.0.0",
+          expose: "./components/PrimaryButton",
+          framework: "react",
+          name: "PrimaryButton",
+          typePackage: "@federlet/remote-react-contracts",
+        },
+      ],
       entryBaseUrl: "http://localhost:3001",
       id: "react-dashboard",
       meta: {
@@ -87,6 +96,15 @@ describe("createRuntimeRemoteRegistry", () => {
           owner: "platform",
         },
         path: "/react/*",
+        components: [
+          {
+            contractVersion: "^1.0.0",
+            expose: "./components/PrimaryButton",
+            framework: "react",
+            name: "PrimaryButton",
+            typePackage: "@federlet/remote-react-contracts",
+          },
+        ],
         remoteName: "remote_react",
         title: "React Remote",
       },
@@ -105,6 +123,23 @@ describe("createRuntimeRemoteRegistry", () => {
       },
       remoteName: "remote_react",
     });
+    expect(registry.listComponents()).toEqual([
+      {
+        contractVersion: "^1.0.0",
+        expose: "./components/PrimaryButton",
+        framework: "react",
+        moduleName: "remote_react/components/PrimaryButton",
+        name: "PrimaryButton",
+        remoteName: "remote_react",
+        typePackage: "@federlet/remote-react-contracts",
+      },
+    ]);
+    expect(registry.getComponent("remote_react", "PrimaryButton")).toMatchObject({
+      moduleName: "remote_react/components/PrimaryButton",
+      name: "PrimaryButton",
+      remoteName: "remote_react",
+    });
+    expect(registry.getComponent("remote_react", "MissingButton")).toBeUndefined();
     expect(registry.getByRouteId("react-dashboard")).toMatchObject({
       remoteName: "remote_react",
     });
@@ -190,6 +225,15 @@ describe("bootstrapRuntimeRemoteRegistry", () => {
       },
     ]);
     expect(registry.getByName("remote_react")).toMatchObject({
+      components: [
+        {
+          contractVersion: "^1.0.0",
+          expose: "./components/PrimaryButton",
+          framework: "react",
+          name: "PrimaryButton",
+          typePackage: "@federlet/remote-react-contracts",
+        },
+      ],
       entry: "http://localhost:3001/remoteEntry.js",
       health: {
         registrationStatus: "registered",

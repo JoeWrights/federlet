@@ -15,6 +15,14 @@ export const DEFAULT_APOLLO_RUNTIME_CONFIG: FederletRuntimeEnvironment = {
     remotes: [
       {
         basename: "/react",
+        components: [
+          {
+            description: "Remote React settings page exposed as a reusable React component.",
+            expose: "./components/SettingsPage",
+            framework: "react",
+            name: "SettingsPage",
+          },
+        ],
         entryBaseUrl: "http://localhost:3001/",
         id: "react-dashboard",
         path: "/react/*",
